@@ -1,0 +1,4 @@
+(lang dune 3.18)
+(name h42n42)
+(sections (lib .))
+(files (lib (META dune-package opam)))

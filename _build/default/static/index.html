@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>H42N42 Simulation</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+      }
+      canvas {
+        border: 1px solid #ccc;
+        margin-top: 20px;
+      }
+      h1 {
+        color: #333;
+      }
+    </style>
+    <script>
+      // Auto-refresh when the JavaScript file changes
+      let lastModified = 0;
+      
+      function checkForUpdates() {
+        fetch('h42n42.js', { method: 'HEAD' })
+          .then(response => {
+            const modified = new Date(response.headers.get('Last-Modified')).getTime();
+            if (lastModified && lastModified !== modified) {
+              console.log('JavaScript updated, refreshing page...');
+              window.location.reload();
+            }
+            lastModified = modified;
+          })
+          .catch(err => console.error('Error checking for updates:', err));
+      }
+      
+      // Check for updates every 2 seconds
+      setInterval(checkForUpdates, 2000);
+    </script>
+  </head>
+  <body>
+    <script src="h42n42.js"></script>
+  </body>
+</html>
