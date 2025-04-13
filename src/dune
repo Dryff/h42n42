@@ -1,5 +1,5 @@
 (executable
  (name h42n42)
  (modes js)
- (libraries js_of_ocaml js_of_ocaml-ppx js_of_ocaml-lwt lwt_ppx)
+ (libraries canvas creet js_of_ocaml js_of_ocaml-ppx js_of_ocaml-lwt lwt_ppx)
  (preprocess (pps js_of_ocaml-ppx lwt_ppx)))

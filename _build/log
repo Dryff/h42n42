@@ -2,7 +2,7 @@
 # OCAMLPARAM: unset
 # Shared cache: enabled-except-user-rules
 # Shared cache location: /home/cgelin/.cache/dune/db
-# Workspace root: /home/cgelin/42Projects/h42n42/h42n42
+# Workspace root: /home/cgelin/42Projects/h42n42
 # Auto-detected concurrency: 12
 # Dune context:
 #  { name = "default"
@@ -13,5 +13,5 @@
 #  ; build_dir = In_build_dir "default"
 #  ; instrument_with = []
 #  }
-$ /home/cgelin/.opam/default/bin/ocamlc.opt -config > /tmp/dune_262729_output
-$ /home/cgelin/.opam/default/bin/js_of_ocaml --version > /tmp/dune_b9b6a0_output
+$ /home/cgelin/.opam/default/bin/ocamlc.opt -config > /tmp/dune_370898_output
+$ /home/cgelin/.opam/default/bin/js_of_ocaml --version > /tmp/dune_a2f835_output
