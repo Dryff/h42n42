@@ -1,0 +1,5 @@
+(library
+ (name renderer)
+ (modes byte)
+ (libraries js_of_ocaml input js_of_ocaml-ppx creet)
+ (preprocess (pps js_of_ocaml-ppx)))

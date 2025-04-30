@@ -1,9 +1,125 @@
 open Js_of_ocaml
 open Creet
 open Canvas
+open Renderer
 module Html = Dom_html
 
-(* Main entry point for the application *)
+(* Periodic spawning and speed increase function *)
+let rec spawn_and_speed_loop () =
+  let current_time = Js.to_float (Js.Unsafe.js_expr "new Date().getTime()") /. 1000. in
+  
+  (* Only spawn if the game is not over *)
+  if not !Gamestate.game_over && not !Gamestate.is_paused then begin
+    (* Check if it's time to spawn a new creet *)
+    if current_time -. !Gamestate.last_spawn >= Gamestate.spawn_interval then begin
+      Gamestate.spawn_creet ();
+      Gamestate.last_spawn := current_time
+    end;
+    
+    (* Check if it's time to increase the global speed *)
+    if current_time -. !Gamestate.last_speed_increase >= Gamestate.speed_increase_interval then begin
+      Creet.global_speed := !Creet.global_speed +. Gamestate.speed_increase_factor;
+      let speed_percentage = int_of_float (!Creet.global_speed *. 100.) in
+      Printf.printf "Speed increased to %d%%\n" speed_percentage;
+      Gamestate.last_speed_increase := current_time
+    end;
+  end;
+  
+  ignore (Html.window##setTimeout
+    (Js.wrap_callback (fun () -> spawn_and_speed_loop ()))
+    (Js.number_of_float 1000.)
+  )
+
+(* Handle mouse clicks including the replay button *)
+let handle_canvas_click canvas ev =
+  let mouse_x = Js.to_float ev##.clientX in
+  let mouse_y = Js.to_float ev##.clientY in
+  let canvas_rect = canvas##getBoundingClientRect in
+  let canvas_x = mouse_x -. Js.to_float canvas_rect##.left in
+  let canvas_y = mouse_y -. Js.to_float canvas_rect##.top in
+  
+  if !Gamestate.game_over && Renderer.is_click_on_replay_button canvas_x canvas_y Gamestate.canvas_width Gamestate.canvas_height then begin
+    Gamestate.reset_game ();
+    Js._true
+  end else if !Gamestate.game_over then
+    Js._false
+  else
+    Input.mousedown_handler ~game_over:Gamestate.game_over ~creets:Gamestate.creets ~dragging:Gamestate.dragging ~offset_x:Gamestate.offset_x ~offset_y:Gamestate.offset_y canvas ev
+
+(* Main game loop *)
+let rec game_loop doc canvas context =
+  (* Calculate time delta *)
+  let current_time = Js.to_float (Js.Unsafe.js_expr "new Date().getTime()") /. 1000. in
+  let dt = if !Gamestate.is_paused then 0. else current_time -. !Gamestate.last_time in
+  Gamestate.last_time := current_time;
+
+  (* Only update game state if not paused and not game over *)
+  if not !Gamestate.is_paused && not !Gamestate.game_over then begin
+    (* Update spell cooldown *)
+    Gamestate.update_spell_cooldown dt;
+
+    (* Update and draw creets *)
+    List.iter (fun creet -> 
+      (* Only update creets if game is not over *)
+      update_creet creet Gamestate.canvas_width Gamestate.canvas_height dt !Gamestate.creets;
+      if not !Gamestate.game_over then
+        check_collisions creet !Gamestate.creets;
+    ) !Gamestate.creets;
+    
+    (* Check if all creets are unhealthy *)
+    Gamestate.check_all_creets_health ();
+
+    (* Calculate elapsed time only if game is not over or paused *)
+    Gamestate.elapsed_time := !Gamestate.elapsed_time +. dt;
+
+    (* Update timer below the canvas *)
+    Ui.update_timer !Gamestate.elapsed_time;
+  end;
+
+  (* Draw background and static elements *)
+  let hospital_config = (Gamestate.hospital_width, Gamestate.hospital_height, Gamestate.hospital_spacing, 
+                        Gamestate.initial_hospital_x, Gamestate.num_hospitals) in
+  draw_background_elements context doc Gamestate.canvas_width Gamestate.canvas_height hospital_config !Gamestate.creets;
+
+  (* Draw all creets *)
+  List.iter (fun creet -> draw_creet context creet) !Gamestate.creets;
+  
+  (* Create list of active spell circles for rendering *)
+  let spell_circles = 
+    if !Gamestate.spell_circle.duration > 0. then [!Gamestate.spell_circle] 
+    else [] 
+  in
+
+  (* Draw spell circle effect if active *)
+  List.iter (draw_spell_circle context) spell_circles;
+
+  (* Display game over screen if game is over *)
+  if !Gamestate.game_over then
+    display_game_over context Gamestate.canvas_width Gamestate.canvas_height !Gamestate.elapsed_time !Gamestate.creets;
+    
+  (* Display pause overlay if paused *)
+  if !Gamestate.is_paused && not !Gamestate.game_over then
+    display_pause_overlay context Gamestate.canvas_width Gamestate.canvas_height;
+
+  (* Request next animation frame *)
+  ignore (Html.window##requestAnimationFrame(
+    Js.wrap_callback (fun _ -> 
+      let _ = game_loop doc canvas context in 
+      ())
+  ));
+  Lwt.return ()
+
+(* Handle visibility change to pause/unpause game *)
+let handle_visibility_change _ =
+  let is_hidden = Js.to_bool (Js.Unsafe.js_expr "document.hidden") in
+  Gamestate.is_paused := is_hidden;
+  if is_hidden then
+    Printf.printf "Game paused - window lost focus\n"
+  else
+    Printf.printf "Game resumed - window regained focus\n";
+  Js._false
+
+(* Main initialization function *)
 let init () =
   let doc = Html.document in
   let body = doc##.body in
@@ -17,142 +133,69 @@ let init () =
   title##.textContent := Js.some (Js.string "H42N42 Simulation");
   Dom.appendChild game_div title;
   
+  (* Create game container for canvas and parameters *)
+  let game_container = Html.createDiv doc in
+  game_container##.style##.position := Js.string "relative";
+  game_container##.style##.width := Js.string (string_of_int (Gamestate.canvas_width + 200) ^ "px");
+  game_container##.style##.height := Js.string (string_of_int Gamestate.canvas_height ^ "px");
+  game_container##.style##.margin := Js.string "0 auto";
+  Dom.appendChild game_div game_container;
+  
   (* Create our game canvas *)
-  let canvas_width = 800 in
-  let canvas_height = 600 in
-  let canvas = create_canvas game_div canvas_width canvas_height in
+  let canvas = create_canvas game_container Gamestate.canvas_width Gamestate.canvas_height in
+  
+  (* Set custom cursor for the entire canvas *)
+  canvas##.style##.cursor := Js.string "pointer";
+  canvas##.style##.position := Js.string "absolute";
+  canvas##.style##.left := Js.string "0";
+  canvas##.style##.top := Js.string "0";
+
+  (* Add timer div below the canvas *)
+  Ui.init_ui doc game_div;
+  
+  (* Set up mouse event handlers *)
+  canvas##.onmousedown := Html.handler (handle_canvas_click canvas);
+  Html.document##.onmousemove := Html.handler (Input.mousemove_handler
+    ~dragging:Gamestate.dragging ~canvas_width:Gamestate.canvas_width ~canvas_height:Gamestate.canvas_height 
+    ~offset_x:Gamestate.offset_x ~offset_y:Gamestate.offset_y canvas);
+  Html.document##.onmouseup := Html.handler (fun _ -> Input.mouseup_handler ~dragging:Gamestate.dragging ());
   
   (* Get canvas 2D context *)
   let context = canvas##getContext (Html._2d_) in
   
-  (* Convert OCaml floats to JavaScript numbers *)
-  let float_to_js f = Js.number_of_float f in
-  
   (* Initialize random number generator *)
   Random.self_init ();
   
-  (* Create creets with only horizontal or vertical movement (not diagonal) *)
-  let create_axis_aligned_creet img_src x y =
-    (* Choose to move either horizontally or vertically, not both *)
-    if Random.bool() then
-      (* Horizontal movement *)
-      let base_speed = 10. in
-      let dx = if Random.bool() then base_speed else -.base_speed in
-      create_creet img_src x y dx 0.
-    else
-      (* Vertical movement *)
-      let base_speed = 10. in
-      let dy = if Random.bool() then base_speed else -.base_speed in
-      create_creet img_src x y 0. dy
-  in
+  (* Initialize game state *)
+  Gamestate.reset_game ();
   
-  (* Initial creets *)
-  let creet1 = create_axis_aligned_creet "creet1.png" 100. 200. in
-  let creet2 = create_axis_aligned_creet "creet2.png" 400. 300. in
-  let creets = ref [creet1; creet2] in
-
-  (* Creet generator *)
-  let last_spawn = ref (Js.to_float (Js.date##now) /. 1000.) in
-  let spawn_interval = 2.0 +. Random.float 6.0 in (* spawn between 2 and 8 seconds *)
-  
-  (* Last time the global speed was increased *)
-  let last_speed_increase = ref (Js.to_float (Js.date##now) /. 1000.) in
-  let speed_increase_interval = 1.0 in (* increase speed every 10 seconds *)
-  let speed_increase_factor = 0.15 in (* increase by 10% each time *)
-  
-  let spawn_creet () =
-    let x = Random.float (float_of_int canvas_width) in
-    let y = Random.float (float_of_int canvas_height) in
-    let img_src = if Random.bool () then "creet1.png" else "creet2.png" in
-    let new_creet = create_axis_aligned_creet img_src x y in
-    creets := new_creet :: !creets
-  in
-
-  (* Set up periodic spawning and speed increase *)
-  let rec spawn_and_speed_loop () =
-    let current_time = Js.to_float (Js.date##now) /. 1000. in
-    
-    (* Check if it's time to spawn a new creet *)
-    if current_time -. !last_spawn >= spawn_interval then begin
-      spawn_creet ();
-      last_spawn := current_time
-    end;
-    
-    (* Check if it's time to increase the global speed *)
-    if current_time -. !last_speed_increase >= speed_increase_interval then begin
-      Creet.global_speed := !Creet.global_speed +. speed_increase_factor;
-      let speed_percentage = int_of_float (!Creet.global_speed *. 100.) in
-      Printf.printf "Speed increased to %d%%\n" speed_percentage;
-      last_speed_increase := current_time
-    end;
-    
-    ignore (Html.window##setTimeout
-      (Js.wrap_callback (fun () -> spawn_and_speed_loop ()))
-      (float_to_js 1000.)
-    )
-  in
+  (* Start spawning creets and increasing speed *)
   spawn_and_speed_loop ();
-  
-  (* Animation time handling *)
-  let last_time = ref (Js.to_float (Js.date##now) /. 1000.) in
-  
-  (* Main game loop *)
-  let rec game_loop () =
-    (* Calculate time delta *)
-    let current_time = Js.to_float (Js.date##now) /. 1000. in
-    let dt = current_time -. !last_time in
-    last_time := current_time;
-    
-    (* Draw background *)
-    context##.fillStyle := Js.string "#eeeeee"; (* Light gray background *)
-    context##fillRect
-      (float_to_js 0.)
-      (float_to_js 0.)
-      (float_to_js (float_of_int canvas_width))
-      (float_to_js (float_of_int canvas_height));
-    
-    (* Draw river at top *)
-    context##.fillStyle := Js.string "#3498db"; (* Blue for river *)
-    context##fillRect
-      (float_to_js 0.)
-      (float_to_js 0.)
-      (float_to_js (float_of_int canvas_width))
-      (float_to_js 30.);
-    
-    (* Draw hospital at bottom *)
-    context##.fillStyle := Js.string "#e74c3c"; (* Red for hospital *)
-    context##fillRect
-      (float_to_js 0.)
-      (float_to_js (float_of_int canvas_height -. 30.))
-      (float_to_js (float_of_int canvas_width))
-      (float_to_js 30.);
-    
-    (* Display current speed as text *)
-    context##.fillStyle := Js.string "#000000"; (* Black text *)
-    context##.font := Js.string "16px Arial";
-    let speed_text = Printf.sprintf "Speed: %d%%" (int_of_float (!Creet.global_speed *. 100.)) in
-    context##fillText 
-      (Js.string speed_text)
-      (float_to_js 10.)
-      (float_to_js 50.);
-    
-    (* Update and draw creets *)
-    List.iter (fun creet -> 
-      update_creet creet canvas_width canvas_height dt;
-      draw_creet context creet;
-    ) !creets;
-    
-    (* Request next animation frame *)
-    ignore (Html.window##requestAnimationFrame(
-      Js.wrap_callback (fun _ -> 
-        let _ = game_loop () in 
-        ())
-    ));
-    Lwt.return ()
+
+  (* Register keydown handler for toggling hitboxes *)
+  Dom_html.window##.onkeydown := Dom_html.handler Input.keydown_handler;
+
+  (* Register visibility change handler to pause/unpause *)
+  let _ = Dom_html.addEventListener Dom_html.document 
+    (Dom_html.Event.make "visibilitychange")
+    (Dom_html.handler (fun _ ->
+      let was_hidden = Js.to_bool (Js.Unsafe.js_expr "document.hidden") in
+      if was_hidden <> !Gamestate.is_paused then begin
+        Gamestate.is_paused := was_hidden;
+        Ui.update_pause_button_state !Gamestate.is_paused;
+      end;
+      Js._false))
+    Js._false
   in
+    
+  (* Register spell button handler *)
+  Ui.register_spell_button_handler Gamestate.cast_healing_spell;
+  
+  (* Register pause button handler *)
+  Ui.register_pause_button_handler Gamestate.toggle_pause;
   
   (* Start the game loop *)
-  game_loop ()
+  game_loop doc canvas context
 
 (* Start the application when the page is loaded *)
 let () =

@@ -1,0 +1,4 @@
+(library
+ (name gamestate)
+ (modes byte)
+ (libraries js_of_ocaml js_of_ocaml-lwt creet entity renderer ui ))
