@@ -9,6 +9,10 @@ let pause_button = ref None
 let pause_button_handler = ref (fun () -> ())
 let ui_container = ref None
 let parameters_container = ref None
+let speed_minus_button = ref None
+let speed_plus_button = ref None
+let speed_minus_handler = ref (fun () -> ())
+let speed_plus_handler = ref (fun () -> ())
 
 (* Create the spell button UI element *)
 let create_spell_button doc parent =
@@ -82,100 +86,138 @@ let update_pause_button_state is_paused =
       btn##.style##.backgroundColor := Js.string button_color
   | None -> ()
 
-(* Create a parameter adjustment button *)
-let create_parameter_button doc parent label =
-  let btn = Html.createButton doc in
-  btn##.className := Js.string "param-button";
-  btn##.textContent := Js.some (Js.string label);
+(* Create a parameter adjustment button pair with + and - buttons *)
+let create_parameter_button_pair doc parent label =
+  (* Create container for the label and buttons *)
+  let param_container = Html.createDiv doc in
+  param_container##.style##.display := Js.string "flex";
+  ignore (Js.Unsafe.set (Js.Unsafe.get param_container##.style) "flexDirection" (Js.string "column"));
+  param_container##.style##.width := Js.string "100%";
+  param_container##.style##.marginBottom := Js.string "10px";
   
-  (* Style the button *)
-  btn##.style##.padding := Js.string "8px 12px";
-  btn##.style##.fontSize := Js.string "14px";
-  btn##.style##.backgroundColor := Js.string "#4A90E2"; (* Blue *)
-  btn##.style##.color := Js.string "white";
-  btn##.style##.border := Js.string "none";
-  btn##.style##.borderRadius := Js.string "5px";
-  btn##.style##.cursor := Js.string "pointer";
-  btn##.style##.margin := Js.string "5px 0";
-  btn##.style##.width := Js.string "100%";
-  ignore (Js.Unsafe.set (Js.Unsafe.get btn##.style) "boxShadow" (Js.string "0 2px 4px rgba(0,0,0,0.2)"));
+  (* Add label *)
+  let param_label = Html.createDiv doc in
+  param_label##.textContent := Js.some (Js.string label);
+  param_label##.style##.color := Js.string "white";
+  param_label##.style##.marginBottom := Js.string "5px";
+  Dom.appendChild param_container param_label;
   
-  Dom.appendChild parent btn;
-  btn
+  (* Create button row container *)
+  let button_row = Html.createDiv doc in
+  button_row##.style##.display := Js.string "flex";
+  ignore (Js.Unsafe.set (Js.Unsafe.get button_row##.style) "justifyContent" (Js.string "space-between"));
+  Dom.appendChild param_container button_row;
+  
+  (* Create - button *)
+  let minus_btn = Html.createButton doc in
+  minus_btn##.className := Js.string "param-button minus-btn";
+  minus_btn##.textContent := Js.some (Js.string "-");
+  
+  (* Style the - button *)
+  minus_btn##.style##.padding := Js.string "6px 12px";
+  minus_btn##.style##.fontSize := Js.string "14px";
+  minus_btn##.style##.backgroundColor := Js.string "#E57373"; (* Light red *)
+  minus_btn##.style##.color := Js.string "white";
+  minus_btn##.style##.border := Js.string "none";
+  minus_btn##.style##.borderRadius := Js.string "5px";
+  minus_btn##.style##.cursor := Js.string "pointer";
+  minus_btn##.style##.width := Js.string "45%";
+  ignore (Js.Unsafe.set (Js.Unsafe.get minus_btn##.style) "boxShadow" (Js.string "0 2px 4px rgba(0,0,0,0.2)"));
+  
+  (* Create + button *)
+  let plus_btn = Html.createButton doc in
+  plus_btn##.className := Js.string "param-button plus-btn";
+  plus_btn##.textContent := Js.some (Js.string "+");
+  
+  (* Style the + button *)
+  plus_btn##.style##.padding := Js.string "6px 12px";
+  plus_btn##.style##.fontSize := Js.string "14px";
+  plus_btn##.style##.backgroundColor := Js.string "#81C784"; (* Light green *)
+  plus_btn##.style##.color := Js.string "white";
+  plus_btn##.style##.border := Js.string "none";
+  plus_btn##.style##.borderRadius := Js.string "5px";
+  plus_btn##.style##.cursor := Js.string "pointer";
+  plus_btn##.style##.width := Js.string "45%";
+  ignore (Js.Unsafe.set (Js.Unsafe.get plus_btn##.style) "boxShadow" (Js.string "0 2px 4px rgba(0,0,0,0.2)"));
+  
+  (* Add buttons to the row *)
+  Dom.appendChild button_row minus_btn;
+  Dom.appendChild button_row plus_btn;
+  
+  (* Add the complete parameter container to parent *)
+  Dom.appendChild parent param_container;
+  
+  (* Return both buttons for event handling *)
+  (minus_btn, plus_btn)
 
-(* Create parameter adjustment UI section *)
-let create_parameters_ui doc game_div =
-  (* Create parameters container *)
-  let container = Html.createDiv doc in
-  container##.id := Js.string "parameters-container";
-  container##.style##.position := Js.string "absolute";
-  container##.style##.top := Js.string "0";
-  container##.style##.right := Js.string "0";
-  container##.style##.width := Js.string "200px";
-  container##.style##.padding := Js.string "15px";
-  container##.style##.backgroundColor := Js.string "rgba(0, 0, 0, 0.7)";
-  container##.style##.borderLeft := Js.string "1px solid #444";
-  container##.style##.height := Js.string "100%";
-  (* Use Js.Unsafe.set for boxSizing property *)
-  ignore (Js.Unsafe.set (Js.Unsafe.get container##.style) "boxSizing" (Js.string "border-box"));
-  parameters_container := Some container;
+(* Create the speed control buttons next to the other buttons *)
+let create_speed_buttons doc parent =
+  (* Create + button *)
+  let plus_btn = Html.createButton doc in
+  plus_btn##.id := Js.string "speed-plus-button";
+  plus_btn##.className := Js.string "speed-button";
+  plus_btn##.textContent := Js.some (Js.string "+");
   
-  (* Create title *)
-  let title = Html.createH3 doc in
-  title##.textContent := Js.some (Js.string "Game Parameters");
-  title##.style##.color := Js.string "white";
-  title##.style##.marginTop := Js.string "0";
-  title##.style##.marginBottom := Js.string "15px";
-  title##.style##.textAlign := Js.string "center";
-  Dom.appendChild container title;
+  (* Style the + button *)
+  plus_btn##.style##.padding := Js.string "10px 15px";
+  plus_btn##.style##.fontSize := Js.string "16px";
+  plus_btn##.style##.fontWeight := Js.string "bold";
+  plus_btn##.style##.backgroundColor := Js.string "#81C784"; (* Light green *)
+  plus_btn##.style##.color := Js.string "white";
+  plus_btn##.style##.border := Js.string "none";
+  plus_btn##.style##.borderRadius := Js.string "5px";
+  plus_btn##.style##.cursor := Js.string "pointer";
+  plus_btn##.style##.margin := Js.string "0 10px";
+  ignore (Js.Unsafe.set (Js.Unsafe.get plus_btn##.style) "boxShadow" (Js.string "0 4px 8px rgba(0,0,0,0.2)"));
+  ignore (Js.Unsafe.set (Js.Unsafe.get plus_btn##.style) "zIndex" (Js.string "1000"));
   
-  (* Create spawn rate adjustment buttons *)
-  let spawn_section = Html.createDiv doc in
-  spawn_section##.style##.marginBottom := Js.string "20px";
-  Dom.appendChild container spawn_section;
+  (* Create - button *)
+  let minus_btn = Html.createButton doc in
+  minus_btn##.id := Js.string "speed-minus-button";
+  minus_btn##.className := Js.string "speed-button";
+  minus_btn##.textContent := Js.some (Js.string "-");
   
-  let spawn_label = Html.createDiv doc in
-  spawn_label##.textContent := Js.some (Js.string "Spawn Rate:");
-  spawn_label##.style##.color := Js.string "white";
-  spawn_label##.style##.marginBottom := Js.string "5px";
-  Dom.appendChild spawn_section spawn_label;
+  (* Style the - button *)
+  minus_btn##.style##.padding := Js.string "10px 15px";
+  minus_btn##.style##.fontSize := Js.string "16px";
+  minus_btn##.style##.fontWeight := Js.string "bold";
+  minus_btn##.style##.backgroundColor := Js.string "#E57373"; (* Light red *)
+  minus_btn##.style##.color := Js.string "white";
+  minus_btn##.style##.border := Js.string "none";
+  minus_btn##.style##.borderRadius := Js.string "5px";
+  minus_btn##.style##.cursor := Js.string "pointer";
+  minus_btn##.style##.margin := Js.string "0 10px";
+  ignore (Js.Unsafe.set (Js.Unsafe.get minus_btn##.style) "boxShadow" (Js.string "0 4px 8px rgba(0,0,0,0.2)"));
+  ignore (Js.Unsafe.set (Js.Unsafe.get minus_btn##.style) "zIndex" (Js.string "1000"));
   
-  ignore (create_parameter_button doc spawn_section "Increase Spawn Rate");
-  ignore (create_parameter_button doc spawn_section "Decrease Spawn Rate");
+  (* Add event listeners *)
+  plus_btn##.onclick := Html.handler (fun _ -> 
+    !speed_plus_handler ();
+    Js._false
+  );
   
-  (* Create speed adjustment buttons *)
-  let speed_section = Html.createDiv doc in
-  speed_section##.style##.marginBottom := Js.string "20px";
-  Dom.appendChild container speed_section;
+  minus_btn##.onclick := Html.handler (fun _ -> 
+    !speed_minus_handler ();
+    Js._false
+  );
   
-  let speed_label = Html.createDiv doc in
-  speed_label##.textContent := Js.some (Js.string "Creet Speed:");
-  speed_label##.style##.color := Js.string "white";
-  speed_label##.style##.marginBottom := Js.string "5px";
-  Dom.appendChild speed_section speed_label;
+  (* Store references *)
+  speed_plus_button := Some plus_btn;
+  speed_minus_button := Some minus_btn;
   
-  ignore (create_parameter_button doc speed_section "Increase Speed");
-  ignore (create_parameter_button doc speed_section "Decrease Speed");
-  
-  (* Create creet type probability buttons *)
-  let type_section = Html.createDiv doc in
-  Dom.appendChild container type_section;
-  
-  let type_label = Html.createDiv doc in
-  type_label##.textContent := Js.some (Js.string "Creet Types:");
-  type_label##.style##.color := Js.string "white";
-  type_label##.style##.marginBottom := Js.string "5px";
-  Dom.appendChild type_section type_label;
-  
-  ignore (create_parameter_button doc type_section "More Mean Creets");
-  ignore (create_parameter_button doc type_section "Less Mean Creets");
-  ignore (create_parameter_button doc type_section "More Berserker Creets");
-  ignore (create_parameter_button doc type_section "Less Berserker Creets");
-  
-  Dom.appendChild game_div container
+  (* Add buttons to parent container *)
+  Dom.appendChild parent minus_btn;
+  Dom.appendChild parent plus_btn
+
+(* Register handlers for speed control buttons *)
+let register_speed_plus_handler handler =
+  speed_plus_handler := handler
+
+let register_speed_minus_handler handler =
+  speed_minus_handler := handler
 
 (* Initialize the UI elements *)
-let init_ui doc game_div =
+let init_ui doc game_div canvas_height =
   (* Create UI container div *)
   let container = Html.createDiv doc in
   container##.id := Js.string "ui-container";
@@ -185,6 +227,8 @@ let init_ui doc game_div =
   ignore (Js.Unsafe.set (Js.Unsafe.get container##.style) "alignItems" (Js.string "center"));
   container##.style##.marginTop := Js.string "15px";
   container##.style##.width := Js.string "100%";
+  container##.style##.position := Js.string "relative";
+  container##.style##.top := Js.string (string_of_int (canvas_height + 40) ^ "px");
   ui_container := Some container;
   Dom.appendChild game_div container;
   
@@ -199,14 +243,14 @@ let init_ui doc game_div =
   timer_div := Some timer;
   Dom.appendChild container timer;
   
+  (* Create speed control buttons first (on the left side) *)
+  create_speed_buttons doc container;
+  
   (* Create spell button *)
   create_spell_button doc container;  
   
   (* Create pause button *)
-  create_pause_button doc container;
-  
-  (* Create parameters UI section *)
-  create_parameters_ui doc game_div
+  create_pause_button doc container
 
 (* Register a handler for the spell button *)
 let register_spell_button_handler handler =
@@ -226,3 +270,25 @@ let update_timer elapsed =
     let seconds = int_of_float (elapsed -. (float_of_int minutes *. 60.)) in
     div##.textContent := Js.some (Js.string (Printf.sprintf "Time: %02d:%02d" minutes seconds))
   | None -> ()
+
+(* Create parameters UI section *)
+let create_parameters_ui doc parent =
+  (* Create parameters container *)
+  let container = Html.createDiv doc in
+  container##.id := Js.string "parameters-container";
+  container##.style##.position := Js.string "absolute";
+  container##.style##.right := Js.string "20px";
+  container##.style##.top := Js.string "10px";
+  container##.style##.width := Js.string "150px";
+  container##.style##.padding := Js.string "15px";
+  container##.style##.backgroundColor := Js.string "rgba(0, 0, 0, 0.6)";
+  container##.style##.borderRadius := Js.string "5px";
+  ignore (Js.Unsafe.set (Js.Unsafe.get container##.style) "boxShadow" (Js.string "0 4px 8px rgba(0,0,0,0.3)"));
+  parameters_container := Some container;
+  Dom.appendChild parent container;
+  
+  (* Create parameter controls *)
+  let _ = create_parameter_button_pair doc container "Power" in
+  let _ = create_parameter_button_pair doc container "Frequency" in
+  let _ = create_parameter_button_pair doc container "Speed" in
+  ()

@@ -1,31 +1,50 @@
 open Js_of_ocaml
 module Html = Dom_html
+
+(* Health status type *)
 type health_status = Healthy | Contaminated | Berserker | Mean
-(* Creet type definition *)
+
+(* Creet type *)
 type creet = {
-mutable x: float; (* X position *)
-mutable y: float; (* Y position *)
-mutable dx: float; (* X velocity *)
-mutable dy: float; (* Y velocity *)
-mutable status: health_status; (* Health status: healthy or contaminated *)
-mutable speed_factor: float; (* Speed factor for the creet *)
-mutable is_dragged: bool; (* Indicates if the creet is being dragged *)
-mutable size_factor: float;
-mutable last_direction_change: float; (* Per-creet direction change timer *)
- image: Html.imageElement Js.t (* Image element *)
+  mutable x: float;
+  mutable y: float;
+  mutable dx: float;
+  mutable dy: float;
+  mutable status: health_status;
+  mutable speed_factor: float;
+  mutable is_dragged: bool;
+  mutable size_factor: float;
+  mutable last_direction_change: float;
+  image: Html.imageElement Js.t
 }
-(* Create a new creet *)
-val create_creet : string -> float -> float -> float -> float -> creet
-(* Update creet's image based on health status *)
-val update_creet_image : creet -> unit
-(* Global speed factor that will increase over time *)
+
+(* Global speed factor *)
 val global_speed : float ref
-(* Update creet position and handle bouncing *)
-val update_creet : creet -> int -> int -> float -> creet list -> unit
-(* Draw a creet *)
-val check_collisions : creet -> creet list -> unit
-(* Handle mouse events for dragging the creet *)
+
+(* Global hitbox size for creets and static elements *)
 val creet_hitbox_size : float
 
+(* Spawn rates for special creet types *)
+val mean_spawn_rate : int
+val berserker_spawn_rate : int
+
+(* Create a new creet - default to healthy status *)
+val create_creet : string -> float -> float -> float -> float -> creet
+
+(* Update creet's image based on status *)
+val update_creet_image : creet -> unit
+
+(* Change creet status and update associated properties *)
 val change_status : creet -> health_status -> unit
-(* Check if a creet is being dragged *)
+
+(* Assign a new random direction to a creet *)
+val assign_new_direction : creet -> unit
+
+(* Find the nearest healthy creet *)
+val find_nearest_healthy_creet : creet -> creet list -> creet option
+
+(* Update creet position, handle bouncing, and check for river/hospital contact *)
+val update_creet : creet -> int -> int -> float -> creet list -> unit
+
+(* Check for collisions between creets *)
+val check_collisions : creet -> creet list -> unit

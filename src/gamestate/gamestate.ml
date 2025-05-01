@@ -1,7 +1,14 @@
 open Js_of_ocaml
 open Creet
-open Renderer
 module Html = Dom_html
+
+(* Spell circle effect type *)
+type spell_circle = {
+  x: float;        (* Center X position *)
+  y: float;        (* Center Y position *)
+  radius: float;   (* Circle radius *)
+  duration: float; (* Duration remaining in seconds *)
+}
 
 (* Global game state variables *)
 let game_over = ref false
@@ -16,15 +23,17 @@ let start_time = ref 0.
 let elapsed_time = ref 0.
 let spell_cooldown = ref 0.  (* Add spell cooldown timer *)
 let spell_active = ref false  (* Is spell currently active *)
-let spell_circle = ref { Renderer.x = 0.; y = 0.; radius = 0.; duration = 0.; } (* Spell circle effect *)
+let spell_circle = ref { x = 0.; y = 0.; radius = 0.; duration = 0.; } (* Spell circle effect *)
 let is_paused = ref false (* Track if the game is paused *)
 
 (* Game configuration *)
 let canvas_width = 800
 let canvas_height = 600
-let spawn_interval = 2.0 +. Random.float 4.0 (* Between 2-6 seconds *)
+let spawn_interval_low = 2
+let spawn_interval_high = 6
+let spawn_interval = ref (float_of_int spawn_interval_low +. Random.float (float_of_int spawn_interval_high -. float_of_int spawn_interval_low)) (* Between 2-6 seconds *)
 let speed_increase_interval = 0.2
-let speed_increase_factor = 0.02
+let speed_increase_factor = 0.01
 
 (* Hospital configuration *)
 let hospital_width = 170.
@@ -52,7 +61,7 @@ let reset_game () =
   elapsed_time := 0.;
   
   (* Create initial creet *)
-  let creet1 = Entity.create_axis_aligned_creet "HealthyCreet.png" 100. 200. in
+  let creet1 = Entity.create_axis_aligned_creet "HealthyCreet.png" 300. 300. in
   creets := [creet1]
 
 (* Spawn a new creet *)

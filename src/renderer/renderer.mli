@@ -26,8 +26,21 @@ val draw_background_elements :
   int -> 
   (float * float * float * float * int) -> 
   Creet.creet list -> 
+  float ->
+  float ->
   unit
 
 val draw_spell_circle : Dom_html.canvasRenderingContext2D Js.t -> spell_circle -> unit
 
-val render : Dom_html.canvasRenderingContext2D Js.t -> Dom_html.document Js.t -> Dom_html.canvasElement Js.t -> Creet.creet list -> float -> bool -> spell_circle list -> unit
+val render : 
+  Dom_html.canvasRenderingContext2D Js.t -> 
+  Dom_html.document Js.t -> 
+  Dom_html.canvasElement Js.t -> 
+  Creet.creet list -> 
+  float -> 
+  bool -> 
+  spell_circle list -> 
+  float -> 
+  float -> 
+  (float * float * float * float * int) ->
+  unit

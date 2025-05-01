@@ -45,13 +45,17 @@ let global_speed = ref 1.0
 (* Global hitbox size for creets and static elements *)
 let creet_hitbox_size = 65.
 
+(* Spawn rates for special creet types *)
+let mean_spawn_rate = 10
+let berserker_spawn_rate = 10
+
 (* Change creet status status and update associated properties *)
 let change_status creet new_status =
   let final_status = 
     if new_status = Contaminated then
       let roll = Random.int 100 in
-      if roll < 10 then Berserker
-      else if roll < 20 then Mean
+      if roll < berserker_spawn_rate then Berserker
+      else if roll < berserker_spawn_rate + mean_spawn_rate then Mean
       else Contaminated
     else new_status
   in

@@ -11,9 +11,11 @@ let rec spawn_and_speed_loop () =
   (* Only spawn if the game is not over *)
   if not !Gamestate.game_over && not !Gamestate.is_paused then begin
     (* Check if it's time to spawn a new creet *)
-    if current_time -. !Gamestate.last_spawn >= Gamestate.spawn_interval then begin
+    if current_time -. !Gamestate.last_spawn >= !Gamestate.spawn_interval then begin
       Gamestate.spawn_creet ();
-      Gamestate.last_spawn := current_time
+      Gamestate.last_spawn := current_time;
+      (* Set new random spawn interval *)
+      Gamestate.spawn_interval := 2.0 +. Random.float 4.0;  (* Between 2-6 seconds *)
     end;
     
     (* Check if it's time to increase the global speed *)
@@ -76,22 +78,25 @@ let rec game_loop doc canvas context =
     Ui.update_timer !Gamestate.elapsed_time;
   end;
 
+                        
   (* Draw background and static elements *)
   let hospital_config = (Gamestate.hospital_width, Gamestate.hospital_height, Gamestate.hospital_spacing, 
                         Gamestate.initial_hospital_x, Gamestate.num_hospitals) in
-  draw_background_elements context doc Gamestate.canvas_width Gamestate.canvas_height hospital_config !Gamestate.creets;
-
-  (* Draw all creets *)
-  List.iter (fun creet -> draw_creet context creet) !Gamestate.creets;
-  
+                        
   (* Create list of active spell circles for rendering *)
   let spell_circles = 
-    if !Gamestate.spell_circle.duration > 0. then [!Gamestate.spell_circle] 
+    if !Gamestate.spell_circle.duration > 0. then 
+      [{ 
+        Renderer.x = !Gamestate.spell_circle.x;
+        y = !Gamestate.spell_circle.y;
+        radius = !Gamestate.spell_circle.radius;
+        duration = !Gamestate.spell_circle.duration 
+      }] 
     else [] 
   in
-
-  (* Draw spell circle effect if active *)
-  List.iter (draw_spell_circle context) spell_circles;
+  
+  (* Render everything *)
+  Renderer.render context doc canvas !Gamestate.creets !Gamestate.elapsed_time !Gamestate.game_over spell_circles (float_of_int Gamestate.spawn_interval_low) (float_of_int Gamestate.spawn_interval_high) hospital_config;
 
   (* Display game over screen if game is over *)
   if !Gamestate.game_over then
@@ -136,8 +141,7 @@ let init () =
   (* Create game container for canvas and parameters *)
   let game_container = Html.createDiv doc in
   game_container##.style##.position := Js.string "relative";
-  game_container##.style##.width := Js.string (string_of_int (Gamestate.canvas_width + 200) ^ "px");
-  game_container##.style##.height := Js.string (string_of_int Gamestate.canvas_height ^ "px");
+  game_container##.style##.width := Js.string (string_of_int Gamestate.canvas_width ^ "px");
   game_container##.style##.margin := Js.string "0 auto";
   Dom.appendChild game_div game_container;
   
@@ -151,7 +155,7 @@ let init () =
   canvas##.style##.top := Js.string "0";
 
   (* Add timer div below the canvas *)
-  Ui.init_ui doc game_div;
+  Ui.init_ui doc game_div Gamestate.canvas_height;
   
   (* Set up mouse event handlers *)
   canvas##.onmousedown := Html.handler (handle_canvas_click canvas);
@@ -193,6 +197,25 @@ let init () =
   
   (* Register pause button handler *)
   Ui.register_pause_button_handler Gamestate.toggle_pause;
+  
+  (* Register speed control button handlers *)
+  Ui.register_speed_plus_handler (fun () ->
+    if not !Gamestate.game_over && not !Gamestate.is_paused then begin
+      let new_speed = !Creet.global_speed +. 0.1 in
+      Creet.global_speed := min new_speed 3.0;  (* Cap at 300% speed *)
+      let speed_percentage = int_of_float (!Creet.global_speed *. 100.) in
+      Printf.printf "Speed increased to %d%%\n" speed_percentage
+    end
+  );
+  
+  Ui.register_speed_minus_handler (fun () ->
+    if not !Gamestate.game_over && not !Gamestate.is_paused then begin
+      let new_speed = !Creet.global_speed -. 0.1 in
+      Creet.global_speed := max new_speed 0.1;  (* Minimum 10% speed *)
+      let speed_percentage = int_of_float (!Creet.global_speed *. 100.) in
+      Printf.printf "Speed decreased to %d%%\n" speed_percentage
+    end
+  );
   
   (* Start the game loop *)
   game_loop doc canvas context

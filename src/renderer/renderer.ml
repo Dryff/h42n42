@@ -12,6 +12,7 @@ type spell_circle = {
   duration: float; (* Duration remaining in seconds *)
 }
 
+(* Draw a creet on the canvas *)
 let draw_creet context creet =
   let float_to_js f = Js.number_of_float f in
   let base_size = Creet.creet_hitbox_size in
@@ -29,7 +30,7 @@ let draw_creet context creet =
     (float_to_js image_draw_y)
     (float_to_js size)
     (float_to_js size);
-  if !Input.show_hitboxes then (
+  if !Input.show_hitboxes then begin
     let hitbox_color = match creet.status with
       | Mean -> "#FF0000"      (* Red *)
       | Berserker -> "#FF69B4" (* Pink *)
@@ -43,7 +44,7 @@ let draw_creet context creet =
       (float_to_js hitbox_draw_y)
       (float_to_js hitbox_width)
       (float_to_js hitbox_height)
-  )
+  end
 
 (* Display game over screen *)
 let display_game_over context canvas_width canvas_height elapsed creets =
@@ -136,7 +137,7 @@ let is_click_on_replay_button x y canvas_width canvas_height =
   y >= button_y && y <= button_y +. button_height
 
 (* Draw background and static elements *)
-let draw_background_elements context doc canvas_width canvas_height (hospital_width, hospital_height, hospital_spacing, initial_hospital_x, num_hospitals) creets =
+let draw_background_elements context doc canvas_width canvas_height (hospital_width, hospital_height, hospital_spacing, initial_hospital_x, num_hospitals) creets spawn_interval_low spawn_interval_high =
   let hospital_y = float_of_int canvas_height -. hospital_height -. -100. in
   
   (* Load and draw background image *)
@@ -190,7 +191,7 @@ let draw_background_elements context doc canvas_width canvas_height (hospital_wi
     )
   done;
   
-  if !Input.show_hitboxes then (
+  if !Input.show_hitboxes then begin
     (* Display current speed as text *)
     context##.fillStyle := Js.string "#000000"; (* Black text *)
     context##.font := Js.string "16px Arial";
@@ -206,7 +207,24 @@ let draw_background_elements context doc canvas_width canvas_height (hospital_wi
       (Js.string creet_count_text)
       (Js.number_of_float 10.)
       (Js.number_of_float 105.);
-  )
+      
+    (* Display spawn interval *)
+    context##fillText 
+      (Js.string (Printf.sprintf "Spawn Interval: %.0fs - %.0fs" spawn_interval_low spawn_interval_high))
+      (Js.number_of_float 10.)
+      (Js.number_of_float 130.);
+      
+    (* Display Mean and Berserker spawn rates *)
+    context##fillText 
+      (Js.string (Printf.sprintf "Mean Spawn Rate: %d%%" Creet.mean_spawn_rate))
+      (Js.number_of_float 10.)
+      (Js.number_of_float 155.);
+      
+    context##fillText 
+      (Js.string (Printf.sprintf "Berserker Spawn Rate: %d%%" Creet.berserker_spawn_rate))
+      (Js.number_of_float 10.)
+      (Js.number_of_float 180.);
+  end
 
 (* Draw the spell circle effect *)
 let draw_spell_circle context circle =
@@ -265,17 +283,9 @@ let display_pause_overlay context canvas_width canvas_height =
   (* Reset text alignment for other text *)
   context##.textAlign := Js.string "left"
 
-let render context doc canvas creets elapsed game_over spell_circles =
+let render context doc canvas creets elapsed game_over spell_circles spawn_interval_low spawn_interval_high hospital_config =
   let canvas_width = canvas##.width in
   let canvas_height = canvas##.height in
-  
-  (* Hospital parameters *)
-  let hospital_width = 72. in
-  let hospital_height = 72. in
-  let hospital_spacing = 190. in
-  let initial_hospital_x = 400. in
-  let num_hospitals = 3 in
-  let hospital_data = (hospital_width, hospital_height, hospital_spacing, initial_hospital_x, num_hospitals) in
   
   (* Clear canvas *)
   context##clearRect
@@ -285,8 +295,8 @@ let render context doc canvas creets elapsed game_over spell_circles =
     (Js.number_of_float (float_of_int canvas_height));
   
   (* Draw background elements and hospitals *)
-  draw_background_elements context doc canvas_width canvas_height hospital_data creets;
-  
+  draw_background_elements context doc canvas_width canvas_height hospital_config creets spawn_interval_low spawn_interval_high;
+
   (* Draw all creets *)
   List.iter (draw_creet context) creets;
 
