@@ -14,8 +14,9 @@ let rec spawn_and_speed_loop () =
     if current_time -. !Gamestate.last_spawn >= !Gamestate.spawn_interval then begin
       Gamestate.spawn_creet ();
       Gamestate.last_spawn := current_time;
-      (* Set new random spawn interval *)
-      Gamestate.spawn_interval := 2.0 +. Random.float 4.0;  (* Between 2-6 seconds *)
+      (* Set new random spawn interval based on current range *)
+      Gamestate.spawn_interval := float_of_int !Gamestate.spawn_interval_low +. 
+                                  Random.float (float_of_int (!Gamestate.spawn_interval_high - !Gamestate.spawn_interval_low));
     end;
     
     (* Check if it's time to increase the global speed *)
@@ -96,7 +97,8 @@ let rec game_loop doc canvas context =
   in
   
   (* Render everything *)
-  Renderer.render context doc canvas !Gamestate.creets !Gamestate.elapsed_time !Gamestate.game_over spell_circles (float_of_int Gamestate.spawn_interval_low) (float_of_int Gamestate.spawn_interval_high) hospital_config;
+  Renderer.render context doc canvas !Gamestate.creets !Gamestate.elapsed_time !Gamestate.game_over spell_circles 
+                 (float_of_int !Gamestate.spawn_interval_low) (float_of_int !Gamestate.spawn_interval_high) hospital_config;
 
   (* Display game over screen if game is over *)
   if !Gamestate.game_over then
@@ -216,6 +218,36 @@ let init () =
       Printf.printf "Speed decreased to %d%%\n" speed_percentage
     end
   );
+  
+  (* Register spawn rate control button handlers *)
+  Ui.register_spawn_plus_handler (fun () ->
+    if not !Gamestate.game_over && not !Gamestate.is_paused then begin
+      Gamestate.spawn_interval_low := max 1 (!Gamestate.spawn_interval_low - 1);
+      Gamestate.spawn_interval_high := max (!Gamestate.spawn_interval_low + 4) (!Gamestate.spawn_interval_high - 1);
+      let avg_interval = (!Gamestate.spawn_interval_low + !Gamestate.spawn_interval_high) / 2 in
+      Printf.printf "Spawn rate increased: %d-%d seconds (avg: %d)\n" 
+        !Gamestate.spawn_interval_low !Gamestate.spawn_interval_high avg_interval
+    end
+  );
+  
+  Ui.register_spawn_minus_handler (fun () ->
+    if not !Gamestate.game_over && not !Gamestate.is_paused then begin
+      Gamestate.spawn_interval_low := !Gamestate.spawn_interval_low + 1;
+      Gamestate.spawn_interval_high := !Gamestate.spawn_interval_high + 1;
+      let avg_interval = (!Gamestate.spawn_interval_low + !Gamestate.spawn_interval_high) / 2 in
+      Printf.printf "Spawn rate decreased: %d-%d seconds (avg: %d)\n" 
+        !Gamestate.spawn_interval_low !Gamestate.spawn_interval_high avg_interval
+    end
+  );
+  
+  (* Register mean creet spawn button handler *)
+  Ui.register_mean_creet_handler Gamestate.spawn_mean_creet;
+  
+  (* Register berserker creet spawn button handler *)
+  Ui.register_berserker_creet_handler Gamestate.spawn_berserker_creet;
+  
+  (* Register healthy creet spawn button handler *)
+  Ui.register_healthy_creet_handler Gamestate.spawn_healthy_creet;
   
   (* Start the game loop *)
   game_loop doc canvas context

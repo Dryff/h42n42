@@ -6,27 +6,27 @@ type spell_circle = {
   duration: float; (* Duration remaining in seconds *)
 }
 
-(* Game state types and variables *)
+(* Game state and configuration *)
 val game_over : bool ref
 val creets : Creet.creet list ref
-val is_paused : bool ref
-val elapsed_time : float ref
-val spell_cooldown : float ref
-val spell_active : bool ref
-val spell_circle : spell_circle ref
 val dragging : Creet.creet option ref
 val offset_x : float ref
 val offset_y : float ref
 val last_time : float ref
 val last_spawn : float ref
 val last_speed_increase : float ref
+val start_time : float ref
+val elapsed_time : float ref
+val spell_cooldown : float ref
+val spell_circle : spell_circle ref
+val is_paused : bool ref
 
 (* Game configuration *)
 val canvas_width : int
 val canvas_height : int
+val spawn_interval_low : int ref
+val spawn_interval_high : int ref
 val spawn_interval : float ref
-val spawn_interval_low : int 
-val spawn_interval_high : int 
 val speed_increase_interval : float
 val speed_increase_factor : float
 
@@ -44,3 +44,7 @@ val cast_healing_spell : unit -> unit
 val update_spell_cooldown : float -> unit
 val check_all_creets_health : unit -> unit
 val spawn_creet : unit -> unit
+val spawn_mean_creet : unit -> unit
+val spawn_berserker_creet : unit -> unit
+val spawn_healthy_creet : unit -> unit
+val spawn_contaminated_creet : unit -> unit

@@ -210,20 +210,10 @@ let draw_background_elements context doc canvas_width canvas_height (hospital_wi
       
     (* Display spawn interval *)
     context##fillText 
-      (Js.string (Printf.sprintf "Spawn Interval: %.0fs - %.0fs" spawn_interval_low spawn_interval_high))
+      (Js.string (Printf.sprintf "Spawn Rate: %.0fs - %.0fs" spawn_interval_low spawn_interval_high))
       (Js.number_of_float 10.)
       (Js.number_of_float 130.);
       
-    (* Display Mean and Berserker spawn rates *)
-    context##fillText 
-      (Js.string (Printf.sprintf "Mean Spawn Rate: %d%%" Creet.mean_spawn_rate))
-      (Js.number_of_float 10.)
-      (Js.number_of_float 155.);
-      
-    context##fillText 
-      (Js.string (Printf.sprintf "Berserker Spawn Rate: %d%%" Creet.berserker_spawn_rate))
-      (Js.number_of_float 10.)
-      (Js.number_of_float 180.);
   end
 
 (* Draw the spell circle effect *)
