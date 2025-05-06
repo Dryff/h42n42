@@ -56,6 +56,9 @@ let display_game_over context canvas_width canvas_height elapsed creets =
     (Js.number_of_float (float_of_int canvas_width))
     (Js.number_of_float (float_of_int canvas_height));
   
+  (* Center point calculation - shifted upward by 15% of canvas height *)
+  let center_y = (float_of_int canvas_height /. 2.) -. (float_of_int canvas_height *. 0.15) in
+  
   (* Game Over text *)
   context##.fillStyle := Js.string "#FF0000"; (* Red text *)
   context##.font := Js.string "bold 48px Arial";
@@ -63,7 +66,7 @@ let display_game_over context canvas_width canvas_height elapsed creets =
   context##fillText 
     (Js.string "GAME OVER")
     (Js.number_of_float (float_of_int canvas_width /. 2.))
-    (Js.number_of_float (float_of_int canvas_height /. 2.));
+    (Js.number_of_float center_y);
   
   (* Subtext *)
   context##.fillStyle := Js.string "#FFFFFF"; (* White text *)
@@ -71,7 +74,7 @@ let display_game_over context canvas_width canvas_height elapsed creets =
   context##fillText 
     (Js.string "All creets are infected!")
     (Js.number_of_float (float_of_int canvas_width /. 2.))
-    (Js.number_of_float (float_of_int canvas_height /. 2. +. 50.));
+    (Js.number_of_float (center_y +. 50.));
   
   (* Display time survived *)
   context##.fillStyle := Js.string "#FFFF00"; (* Yellow text *)
@@ -82,7 +85,7 @@ let display_game_over context canvas_width canvas_height elapsed creets =
   context##fillText 
     (Js.string time_text)
     (Js.number_of_float (float_of_int canvas_width /. 2.))
-    (Js.number_of_float (float_of_int canvas_height /. 2. +. 100.));
+    (Js.number_of_float (center_y +. 100.));
 
   (* Display score calculation (creets × seconds) *)
   context##.fillStyle := Js.string "#00FFFF";  (* Cyan text *)
@@ -99,13 +102,13 @@ let display_game_over context canvas_width canvas_height elapsed creets =
   context##fillText
     (Js.string score_text)
     (Js.number_of_float (float_of_int canvas_width /. 2.))
-    (Js.number_of_float (float_of_int canvas_height /. 2. +. 140.));
+    (Js.number_of_float (center_y +. 140.));
   
   (* Draw replay button *)
   let button_width = 120. in
   let button_height = 40. in
   let button_x = (float_of_int canvas_width /. 2.) -. (button_width /. 2.) in
-  let button_y = (float_of_int canvas_height /. 2.) +. 150. in
+  let button_y = center_y +. 190. in
   
   (* Draw button background *)
   context##.fillStyle := Js.string "#4CAF50"; (* Green button *)
@@ -130,9 +133,10 @@ let display_game_over context canvas_width canvas_height elapsed creets =
 let is_click_on_replay_button x y canvas_width canvas_height =
   let button_width = 120. in
   let button_height = 40. in
+  let center_y = (float_of_int canvas_height /. 2.) -. (float_of_int canvas_height *. 0.15) in
   let button_x = (float_of_int canvas_width /. 2.) -. (button_width /. 2.) in
-  let button_y = (float_of_int canvas_height /. 2.) +. 150. in
-  
+  let button_y = center_y +. 190. in
+
   x >= button_x && x <= button_x +. button_width &&
   y >= button_y && y <= button_y +. button_height
 

@@ -157,7 +157,7 @@ let init () =
   canvas##.style##.top := Js.string "0";
 
   (* Add timer div below the canvas *)
-  Ui.init_ui doc game_div Gamestate.canvas_height;
+  Ui.init_ui doc game_div;
   
   (* Set up mouse event handlers *)
   canvas##.onmousedown := Html.handler (handle_canvas_click canvas);

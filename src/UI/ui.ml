@@ -520,20 +520,24 @@ let register_healthy_creet_handler handler =
   healthy_creet_handler := handler
 
 (* Initialize the UI elements *)
-let init_ui doc game_div canvas_height =
-  (* Create UI container div for buttons at the bottom *)
-  let container = Html.createDiv doc in
-  container##.id := Js.string "ui-container";
-  container##.style##.display := Js.string "flex";
-  (* Use Js.Unsafe.set for CSS properties that aren't directly supported *)
-  ignore (Js.Unsafe.set (Js.Unsafe.get container##.style) "justifyContent" (Js.string "center"));
-  ignore (Js.Unsafe.set (Js.Unsafe.get container##.style) "alignItems" (Js.string "center"));
-  container##.style##.marginTop := Js.string "15px";
-  container##.style##.width := Js.string "100%";
-  container##.style##.position := Js.string "relative";
-  container##.style##.top := Js.string (string_of_int (canvas_height + 40) ^ "px");
-  ui_container := Some container;
-  Dom.appendChild game_div container;
+let init_ui doc game_div =
+  (* Create left side container for control buttons *)
+  let left_controls = Html.createDiv doc in
+  left_controls##.id := Js.string "left-controls";
+  left_controls##.style##.cssText := Js.string "display: flex; flex-direction: column; gap: 16px;";
+  left_controls##.style##.cssText := Js.string
+    "position: absolute; \
+     top: 30%; \
+     left: 15%; \
+     width: 200px; \
+     padding: 20px; \
+     border-radius: 5px; \
+     display: flex; \
+     flex-direction: column; \
+     background-color: rgb(78, 78, 78); \
+     gap: 16px;";
+  ui_container := Some left_controls;
+  Dom.appendChild doc##.body left_controls;
   
   (* Create timer div at the very top of the page, centered *)
   let timer_container = Html.createDiv doc in
@@ -564,26 +568,31 @@ let init_ui doc game_div canvas_height =
   timer_div := Some timer;
   Dom.appendChild timer_container timer;
   
-  (* Create speed control buttons first (on the left side) *)
-  create_speed_buttons doc container;
+  (* Create pause button - now in left column *)
+  create_pause_button doc left_controls;
   
-  (* Create spawn rate control buttons *)
-  create_spawn_buttons doc container;
+  (* Create speed control buttons - now in left column *)
+  create_speed_buttons doc left_controls;
   
-  (* Create spell button *)
-  create_spell_button doc container;  
+  (* Create spawn rate control buttons - now in left column *)
+  create_spawn_buttons doc left_controls;
   
-  (* Create pause button *)
-  create_pause_button doc container;
+  (* Create creet spawn buttons - now in left column *)
+  create_mean_creet_button doc left_controls;
+  create_berserker_creet_button doc left_controls;
+  create_healthy_creet_button doc left_controls;
   
-  (* Create mean creet spawn button *)
-  create_mean_creet_button doc container;
-  
-  (* Create berserker creet spawn button *)
-  create_berserker_creet_button doc container;
-  
-  (* Create healthy creet spawn button *)
-  create_healthy_creet_button doc container
+  (* Create spell button - directly in the game div, positioned at the bottom *)
+  let spell_container = Html.createDiv doc in
+  spell_container##.style##.cssText := Js.string (
+    "position: absolute; \
+    top: 85%; \
+    left: 50%; \
+    transform: translateX(-50%); \
+    z-index: 1000;"
+  );
+  Dom.appendChild game_div spell_container;
+  create_spell_button doc spell_container
 
 (* Register a handler for the spell button *)
 let register_spell_button_handler handler =

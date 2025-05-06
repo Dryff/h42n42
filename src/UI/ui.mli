@@ -2,7 +2,10 @@
 open Js_of_ocaml
 module Html = Dom_html
 
-val init_ui : Html.document Js.t -> Html.divElement Js.t -> int -> unit
+(* Initialize UI elements *)
+val init_ui : Html.document Js.t -> Html.divElement Js.t -> unit
+
+(* Other UI functions *)
 val show_game_over : unit -> unit
 val update_timer : float -> unit
 val create_spell_button : Dom_html.document Js.t -> Dom_html.element Js.t -> unit
