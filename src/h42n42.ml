@@ -1,8 +1,13 @@
 open Js_of_ocaml
-open Creet
-open Canvas
-open Renderer
+open Lwt.Syntax 
 module Html = Dom_html
+
+let create_canvas parent width height =
+  let canvas = Html.createCanvas Html.document in
+  canvas##.width := width;
+  canvas##.height := height;
+  Dom.appendChild parent canvas;
+  canvas
 
 (* Periodic spawning and speed increase function *)
 let rec spawn_and_speed_loop () =
@@ -12,7 +17,17 @@ let rec spawn_and_speed_loop () =
   if not !Gamestate.game_over && not !Gamestate.is_paused then begin
     (* Check if it's time to spawn a new creet *)
     if current_time -. !Gamestate.last_spawn >= !Gamestate.spawn_interval then begin
+      let old_count = List.length !Gamestate.creets in
       Gamestate.spawn_creet ();
+      let new_count = List.length !Gamestate.creets in
+
+      if new_count > old_count then begin
+        match !Gamestate.creets with
+        | new_creet :: _ -> 
+            Movement.start_creet_movement new_creet Gamestate.canvas_width Gamestate.canvas_height Gamestate.creets
+        | [] -> ()
+      end;
+      
       Gamestate.last_spawn := current_time;
       (* Set new random spawn interval based on current range *)
       Gamestate.spawn_interval := float_of_int !Gamestate.spawn_interval_low +. 
@@ -42,7 +57,10 @@ let handle_canvas_click canvas ev =
   let canvas_y = mouse_y -. Js.to_float canvas_rect##.top in
   
   if !Gamestate.game_over && Renderer.is_click_on_replay_button canvas_x canvas_y Gamestate.canvas_width Gamestate.canvas_height then begin
+    Movement.stop_all_movements ();
     Gamestate.reset_game ();
+    Movement.start_all_movements Gamestate.canvas_width Gamestate.canvas_height Gamestate.creets;
+
     Js._true
   end else if !Gamestate.game_over then
     Js._false
@@ -52,7 +70,6 @@ let handle_canvas_click canvas ev =
 
 (* GAME LOOP *)
 let rec game_loop doc canvas context =
-  (* Calculate delta time for smooth animation *)
   let current_time = Js.to_float (Js.Unsafe.js_expr "new Date().getTime()") /. 1000. in
   let dt = if !Gamestate.is_paused then 0. else current_time -. !Gamestate.last_time in
   Gamestate.last_time := current_time;
@@ -60,19 +77,11 @@ let rec game_loop doc canvas context =
   (* Update Game if not paused or game over *)
   if not !Gamestate.is_paused && not !Gamestate.game_over then begin
     Gamestate.update_spell_cooldown dt;
-
-    (* Update, draw creets and check collisions *)
-    List.iter (fun creet -> 
-      update_creet creet Gamestate.canvas_width Gamestate.canvas_height dt !Gamestate.creets;
-      if not !Gamestate.game_over then
-        check_collisions creet !Gamestate.creets;
-    ) !Gamestate.creets;
+    
     Gamestate.check_all_creets_health ();
-
     Gamestate.elapsed_time := !Gamestate.elapsed_time +. dt;
     Ui.update_timer !Gamestate.elapsed_time;
   end;
-
                         
   (* Draw background and static elements *)
   let hospital_config = (Gamestate.hospital_width, Gamestate.hospital_height, Gamestate.hospital_spacing, 
@@ -91,16 +100,8 @@ let rec game_loop doc canvas context =
   in
   
   (* Render everything *)
-  Renderer.render context doc canvas !Gamestate.creets !Gamestate.elapsed_time !Gamestate.game_over spell_circles 
+  Renderer.render context doc canvas !Gamestate.creets !Gamestate.elapsed_time !Gamestate.game_over !Gamestate.is_paused spell_circles 
                  (float_of_int !Gamestate.spawn_interval_low) (float_of_int !Gamestate.spawn_interval_high) hospital_config;
-
-  (* Game over screen*)
-  if !Gamestate.game_over then
-    display_game_over context Gamestate.canvas_width Gamestate.canvas_height !Gamestate.elapsed_time !Gamestate.creets;
-    
-  (* Pause screen *)
-  if !Gamestate.is_paused && not !Gamestate.game_over then
-    display_pause_overlay context Gamestate.canvas_width Gamestate.canvas_height;
 
   (* Request next animation frame *)
   ignore (Html.window##requestAnimationFrame(
@@ -109,6 +110,34 @@ let rec game_loop doc canvas context =
       ())
   ));
   Lwt.return ()
+
+let rec handle_canvas_mousedown_events canvas =
+  let* event = Js_of_ocaml_lwt.Lwt_js_events.mousedown canvas in
+  let _ = handle_canvas_click canvas event in
+  handle_canvas_mousedown_events canvas
+
+let rec handle_document_mousemove_events canvas =
+  let* event = Js_of_ocaml_lwt.Lwt_js_events.mousemove Html.document in
+  let _ = Input.mousemove_handler
+    ~dragging:Gamestate.dragging 
+    ~canvas_width:Gamestate.canvas_width 
+    ~canvas_height:Gamestate.canvas_height 
+    ~offset_x:Gamestate.offset_x 
+    ~offset_y:Gamestate.offset_y 
+    canvas event in
+  handle_document_mousemove_events canvas
+
+let rec handle_document_mouseup_events () =
+  let* _event = Js_of_ocaml_lwt.Lwt_js_events.mouseup Html.document in
+  let _ = Input.mouseup_handler ~dragging:Gamestate.dragging () in
+  handle_document_mouseup_events ()
+
+(* Setup all mouse event loops *)
+let setup_mouse_events canvas =
+  Lwt.async (fun () -> handle_canvas_mousedown_events canvas);
+  Lwt.async (fun () -> handle_document_mousemove_events canvas);
+  Lwt.async (fun () -> handle_document_mouseup_events ())
+
 
 (* INITIALIZATION OF CANVAS AND UI *)
 let init () =
@@ -142,13 +171,9 @@ let init () =
 
   (* Add timer div below the canvas *)
   Ui.init_ui doc game_div;
-  
-  (* Set up mouse event handlers *)
-  canvas##.onmousedown := Html.handler (handle_canvas_click canvas);
-  Html.document##.onmousemove := Html.handler (Input.mousemove_handler
-    ~dragging:Gamestate.dragging ~canvas_width:Gamestate.canvas_width ~canvas_height:Gamestate.canvas_height 
-    ~offset_x:Gamestate.offset_x ~offset_y:Gamestate.offset_y canvas);
-  Html.document##.onmouseup := Html.handler (fun _ -> Input.mouseup_handler ~dragging:Gamestate.dragging ());
+
+  (* NEW: Setup Lwt mouse event loops *)
+  setup_mouse_events canvas;
   
   (* Get canvas 2D context *)
   let context = canvas##getContext (Html._2d_) in
@@ -158,6 +183,9 @@ let init () =
   
   (* Initialize game state *)
   Gamestate.reset_game ();
+
+  (* Start movement threads for initial creets *)
+  Movement.start_all_movements Gamestate.canvas_width Gamestate.canvas_height Gamestate.creets;
   
   (* Start spawning creets and increasing speed *)
   spawn_and_speed_loop ();
@@ -216,9 +244,14 @@ let init () =
         !Gamestate.spawn_interval_low !Gamestate.spawn_interval_high avg_interval
     end
   );
-  Ui.register_mean_creet_handler Gamestate.spawn_mean_creet;
-  Ui.register_berserker_creet_handler Gamestate.spawn_berserker_creet;
-  Ui.register_healthy_creet_handler Gamestate.spawn_healthy_creet;
+
+(* Register button handlers *)
+Ui.register_mean_creet_handler (fun () -> 
+  Movement.spawn_mean_creet ());
+Ui.register_berserker_creet_handler (fun () -> 
+  Movement.spawn_berserker_creet ());
+Ui.register_healthy_creet_handler (fun () -> 
+  Movement.spawn_healthy_creet ());
 
   (* Start game loop *)
   game_loop doc canvas context

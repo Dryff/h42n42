@@ -17,7 +17,7 @@ type creet = {
   image: Html.imageElement Js.t 
 }
 
-(* Create a new creet - default to healthy status *)
+(* Create a new healthy creet *)
 let create_creet img_src x y dx dy =
   let img = Html.createImg Html.document in
   img##.src := Js.string img_src;
@@ -44,7 +44,6 @@ let creet_hitbox_size = 65.
 let mean_spawn_rate = 10
 let berserker_spawn_rate = 10
 
-(* Change creet status status and update associated properties *)
 let change_status creet new_status =
   let final_status = 
     if new_status = Contaminated then
@@ -60,7 +59,6 @@ let change_status creet new_status =
     | Mean -> 1.1
     | _ -> 0.85 
   );
-  (* Adjust size_factor: Mean creets are 15% smaller *)
   creet.size_factor <- (match final_status with
     | Mean -> 0.85
     | _ -> creet.size_factor
@@ -69,7 +67,6 @@ let change_status creet new_status =
     creet.size_factor <- 1.0;
   update_creet_image creet
 
-(* Assign a new random direction to a creet *)
 let assign_new_direction creet =
   let base_speed = 10. in
   if Random.bool () then begin
@@ -101,7 +98,6 @@ let find_nearest_healthy_creet creet all_creets =
 
 (* Update creet position, handle bouncing, and check for river/hospital contact *)
 let update_creet creet canvas_width canvas_height dt all_creets =
-  (* Check if it's time to change direction *)
   let current_time = Js.to_float (Js.date##now) /. 1000. in
   
   (* Chasing healthy creets *)
@@ -155,17 +151,17 @@ let update_creet creet canvas_width canvas_height dt all_creets =
   if creet.status = Berserker then begin
     (* Gradually increase size up to 4x over time *)
     let max_size = 4.0 in
-    let growth_rate = 0.1 *. dt in (* Adjust growth rate as needed *)
+    let growth_rate = 0.1 *. dt in
     creet.size_factor <- min max_size (creet.size_factor +. growth_rate);
   end;
 
-  (* Check if creet is touching the river (top area) and change status if needed *)
+  (* Check for collision with river *)
   let river_height = 20. in
   if creet.y -. creet_hitbox_size <= river_height && creet.status = Healthy && not creet.is_dragged then begin
     change_status creet Contaminated;
-  end;    
-  
-  (* Hospital is at the bottom, check for collision with any hospital *)
+  end;
+
+  (* Check for collision with hospital *)
   let hospital_y = float_of_int canvas_height -. 20. in
   if creet.y +. creet_hitbox_size >= hospital_y && creet.status <> Healthy && creet.is_dragged then begin
     change_status creet Healthy;

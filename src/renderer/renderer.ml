@@ -4,15 +4,13 @@ module Html = Dom_html
 
 type t = Creet.creet
 
-(* Spell circle effect type *)
 type spell_circle = {
-  x: float;        (* Center X position *)
-  y: float;        (* Center Y position *)
-  radius: float;   (* Circle radius *)
-  duration: float; (* Duration remaining in seconds *)
+  x: float;        
+  y: float;        
+  radius: float;   
+  duration: float; 
 }
 
-(* Draw a creet on the canvas *)
 let draw_creet context creet =
   let float_to_js f = Js.number_of_float f in
   let base_size = Creet.creet_hitbox_size in
@@ -46,9 +44,8 @@ let draw_creet context creet =
       (float_to_js hitbox_height)
   end
 
-(* Display game over screen *)
+(* GAME OVER SCREEN *)
 let display_game_over context canvas_width canvas_height elapsed creets =
-  (* Semi-transparent overlay *)
   context##.fillStyle := Js.string "rgba(0, 0, 0, 0.7)";
   context##fillRect
     (Js.number_of_float 0.)
@@ -56,11 +53,10 @@ let display_game_over context canvas_width canvas_height elapsed creets =
     (Js.number_of_float (float_of_int canvas_width))
     (Js.number_of_float (float_of_int canvas_height));
   
-  (* Center point calculation - shifted upward by 15% of canvas height *)
   let center_y = (float_of_int canvas_height /. 2.) -. (float_of_int canvas_height *. 0.15) in
   
   (* Game Over text *)
-  context##.fillStyle := Js.string "#FF0000"; (* Red text *)
+  context##.fillStyle := Js.string "#FF0000"; 
   context##.font := Js.string "bold 48px Arial";
   context##.textAlign := Js.string "center";
   context##fillText 
@@ -69,7 +65,7 @@ let display_game_over context canvas_width canvas_height elapsed creets =
     (Js.number_of_float center_y);
   
   (* Subtext *)
-  context##.fillStyle := Js.string "#FFFFFF"; (* White text *)
+  context##.fillStyle := Js.string "#FFFFFF";
   context##.font := Js.string "24px Arial";
   context##fillText 
     (Js.string "All creets are infected!")
@@ -77,7 +73,7 @@ let display_game_over context canvas_width canvas_height elapsed creets =
     (Js.number_of_float (center_y +. 50.));
   
   (* Display time survived *)
-  context##.fillStyle := Js.string "#FFFF00"; (* Yellow text *)
+  context##.fillStyle := Js.string "#FFFF00";
   context##.font := Js.string "28px Arial";
   let minutes = int_of_float (elapsed /. 60.) in
   let seconds = int_of_float (elapsed -. (float_of_int minutes *. 60.)) in
@@ -87,11 +83,9 @@ let display_game_over context canvas_width canvas_height elapsed creets =
     (Js.number_of_float (float_of_int canvas_width /. 2.))
     (Js.number_of_float (center_y +. 100.));
 
-  (* Display score calculation (creets × seconds) *)
-  context##.fillStyle := Js.string "#00FFFF";  (* Cyan text *)
+  (* Calculate and display score (creets × seconds) *)
+  context##.fillStyle := Js.string "#00FFFF";
   context##.font := Js.string "32px Arial";
-  
-  (* Calculate the score by multiplying number of creets by elapsed seconds *)
   let total_seconds = int_of_float elapsed in
   let creet_count = List.length creets in
   let final_score = creet_count * total_seconds in
@@ -109,24 +103,18 @@ let display_game_over context canvas_width canvas_height elapsed creets =
   let button_height = 40. in
   let button_x = (float_of_int canvas_width /. 2.) -. (button_width /. 2.) in
   let button_y = center_y +. 190. in
-  
-  (* Draw button background *)
-  context##.fillStyle := Js.string "#4CAF50"; (* Green button *)
+  context##.fillStyle := Js.string "#4CAF50";
   context##fillRect
     (Js.number_of_float button_x)
     (Js.number_of_float button_y)
     (Js.number_of_float button_width)
     (Js.number_of_float button_height);
-  
-  (* Draw button text *)
   context##.fillStyle := Js.string "#FFFFFF"; (* White text *)
   context##.font := Js.string "20px Arial";
   context##fillText 
     (Js.string "Replay")
     (Js.number_of_float (float_of_int canvas_width /. 2.))
     (Js.number_of_float (button_y +. 25.));
-  
-  (* Reset text alignment for other text *)
   context##.textAlign := Js.string "left"
 
 (* Function to check if a click is within the replay button *)
@@ -173,7 +161,7 @@ let draw_background_elements context doc canvas_width canvas_height (hospital_wi
       (Js.number_of_float 50.)
   );
 
-  (* Draw hospitals at regular intervals *)
+  (* Draw hospitals houses *)
   for i = 0 to num_hospitals - 1 do
     let hospital_x = initial_hospital_x +. (float_of_int i *. hospital_spacing) in
     let hospital_img = Html.createImg doc in
@@ -195,24 +183,20 @@ let draw_background_elements context doc canvas_width canvas_height (hospital_wi
     )
   done;
   
+  (* DEBUG MODE TEXT *)
   if !Input.show_hitboxes then begin
-    (* Display current speed as text *)
-    context##.fillStyle := Js.string "#000000"; (* Black text *)
+    context##.fillStyle := Js.string "#000000";
     context##.font := Js.string "16px Arial";
     let speed_text = Printf.sprintf "Speed: %d%%" (int_of_float (!Creet.global_speed *. 100.)) in
     context##fillText 
       (Js.string speed_text)
       (Js.number_of_float 10.)
       (Js.number_of_float 80.);
-      
-    (* Display creet count *)
     let creet_count_text = Printf.sprintf "Creets: %d" (List.length creets) in
     context##fillText 
       (Js.string creet_count_text)
       (Js.number_of_float 10.)
       (Js.number_of_float 105.);
-      
-    (* Display spawn interval *)
     context##fillText 
       (Js.string (Printf.sprintf "Spawn Rate: %.0fs - %.0fs" spawn_interval_low spawn_interval_high))
       (Js.number_of_float 10.)
@@ -220,15 +204,12 @@ let draw_background_elements context doc canvas_width canvas_height (hospital_wi
       
   end
 
-(* Draw the spell circle effect *)
 let draw_spell_circle context circle =
   (* Save current context state *)
   context##save;
   
-  (* Calculate opacity based on remaining duration - fade from 0.4 to 0 over the duration *)
+  (* Fading effect *)
   let opacity = 0.4 *. (circle.duration /. 3.0) in
-  
-  (* Configure the circle appearance with fading opacity *)
   context##.fillStyle := Js.string (Printf.sprintf "rgba(64, 224, 208, %.2f)" opacity);
   context##.strokeStyle := Js.string (Printf.sprintf "rgba(64, 224, 208, %.2f)" (opacity +. 0.1));
   context##.lineWidth := Js.number_of_float 3.;
@@ -248,17 +229,14 @@ let draw_spell_circle context circle =
   (* Restore context state *)
   context##restore
 
-(* Display pause overlay when game is paused *)
+(* PAUSE SCREEN *)
 let display_pause_overlay context canvas_width canvas_height =
-  (* Semi-transparent overlay *)
   context##.fillStyle := Js.string "rgba(0, 0, 0, 0.5)";
   context##fillRect
     (Js.number_of_float 0.)
     (Js.number_of_float 0.)
     (Js.number_of_float (float_of_int canvas_width))
     (Js.number_of_float (float_of_int canvas_height));
-  
-  (* Pause message *)
   context##.fillStyle := Js.string "#FFFFFF"; (* White text *)
   context##.font := Js.string "bold 48px Arial";
   context##.textAlign := Js.string "center";
@@ -266,18 +244,14 @@ let display_pause_overlay context canvas_width canvas_height =
     (Js.string "PAUSED")
     (Js.number_of_float (float_of_int canvas_width /. 2.))
     (Js.number_of_float (float_of_int canvas_height /. 2.));
-  
-  (* Pause instructions *)
   context##.font := Js.string "24px Arial";
   context##fillText 
     (Js.string "Click on the button to resume")
     (Js.number_of_float (float_of_int canvas_width /. 2.))
     (Js.number_of_float (float_of_int canvas_height /. 2. +. 50.));
-  
-  (* Reset text alignment for other text *)
   context##.textAlign := Js.string "left"
 
-let render context doc canvas creets elapsed game_over spell_circles spawn_interval_low spawn_interval_high hospital_config =
+let render context doc canvas creets elapsed game_over is_paused spell_circles spawn_interval_low spawn_interval_high hospital_config =
   let canvas_width = canvas##.width in
   let canvas_height = canvas##.height in
   
@@ -300,3 +274,5 @@ let render context doc canvas creets elapsed game_over spell_circles spawn_inter
   (* Display game over screen if needed *)
   if game_over then
     display_game_over context canvas_width canvas_height elapsed creets
+  else if is_paused then
+    display_pause_overlay context canvas_width canvas_height

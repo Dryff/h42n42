@@ -13,7 +13,7 @@ type spell_circle = {
 (* Global game state variables *)
 let game_over = ref false
 let creets = ref []
-let dragging = ref None
+let dragging = ref (None : Creet.creet option)
 let offset_x = ref 0.
 let offset_y = ref 0.
 let last_time = ref 0.
@@ -42,6 +42,17 @@ let initial_hospital_x = 10.
 let num_hospitals = 4
 
 (* Reset the game to initial state *)
+let spawn_creet () =
+  (* Define the missing variables *)
+  let spawn_x = Random.float (float_of_int canvas_width) in
+  let spawn_y = Random.float (float_of_int canvas_height) in
+  let spawn_dx = 10. in
+  let spawn_dy = 0. in
+  
+  let new_creet = Creet.create_creet "HealthyCreet.png" spawn_x spawn_y spawn_dx spawn_dy in
+  creets := new_creet :: !creets
+
+(* Reset the game to initial state *)
 let reset_game () =
   game_over := false;
   creets := [];
@@ -61,56 +72,10 @@ let reset_game () =
   (* Set initial spawn interval *)
   spawn_interval := float_of_int !spawn_interval_low +. Random.float (float_of_int (!spawn_interval_high - !spawn_interval_low));
   
-  (* Create initial creet *)
-  let creet1 = Entity.create_axis_aligned_creet "HealthyCreet.png" 300. 300. in
-  creets := [creet1]
-
-(* Spawn a new creet *)
-let spawn_creet () =
-  (* Only spawn if the game is not paused *)
-  if not !is_paused then begin
-    let new_creet = Entity.create_random_healthy_creet canvas_width canvas_height in
-    creets := new_creet :: !creets
-  end
-
-(* Spawn a mean creet *)
-let spawn_mean_creet () =
-  (* Only spawn if the game is not paused and not game over *)
-  if not !is_paused && not !game_over then begin
-    let new_creet = Entity.create_random_healthy_creet canvas_width canvas_height in
-    Creet.change_status new_creet Creet.Mean;
-    creets := new_creet :: !creets;
-    Printf.printf "Mean creet spawned\n"
-  end
-
-(* Spawn a berserker creet *)
-let spawn_berserker_creet () =
-  (* Only spawn if the game is not paused and not game over *)
-  if not !is_paused && not !game_over then begin
-    let new_creet = Entity.create_random_healthy_creet canvas_width canvas_height in
-    Creet.change_status new_creet Creet.Berserker;
-    creets := new_creet :: !creets;
-    Printf.printf "Berserker creet spawned\n"
-  end
-
-(* Spawn a healthy creet *)
-let spawn_healthy_creet () =
-  (* Only spawn if the game is not paused and not game over *)
-  if not !is_paused && not !game_over then begin
-    let new_creet = Entity.create_random_healthy_creet canvas_width canvas_height in
-    creets := new_creet :: !creets;
-    Printf.printf "Healthy creet spawned\n"
-  end
-
-(* Spawn a contaminated creet *)
-let spawn_contaminated_creet () =
-  (* Only spawn if the game is not paused and not game over *)
-  if not !is_paused && not !game_over then begin
-    let new_creet = Entity.create_random_healthy_creet canvas_width canvas_height in
-    Creet.change_status new_creet Creet.Contaminated;
-    creets := new_creet :: !creets;
-    Printf.printf "Contaminated creet spawned\n"
-  end
+  (* Spawn initial creets *)
+  for _ = 1 to 5 do
+    spawn_creet ()
+  done
 
 (* Check if all creets are unhealthy (game over condition) *)
 let check_all_creets_health () =

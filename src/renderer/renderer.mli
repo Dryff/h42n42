@@ -39,6 +39,7 @@ val render :
   Creet.creet list -> 
   float -> 
   bool -> 
+  bool ->
   spell_circle list -> 
   float -> 
   float -> 

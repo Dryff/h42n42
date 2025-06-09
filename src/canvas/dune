@@ -1,4 +1,0 @@
-(library
- (name canvas)
- (libraries js_of_ocaml js_of_ocaml-lwt gamestate)
- (preprocess (pps js_of_ocaml-ppx)))

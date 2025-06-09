@@ -1,4 +1,5 @@
 open Js_of_ocaml
+open Lwt.Syntax
 module Html = Dom_html
 
 (* References to UI elements *)
@@ -43,11 +44,13 @@ let create_spell_button doc parent =
   ignore (Js.Unsafe.set (Js.Unsafe.get btn##.style) "boxShadow" (Js.string "0 4px 8px rgba(0,0,0,0.2)"));
   btn##.style##.zIndex := Js.string "1000";
   
-  (* Add event listener *)
-  btn##.onclick := Html.handler (fun _ -> 
+  let rec listen_for_clicks () =
+    let* _event = Js_of_ocaml_lwt.Lwt_js_events.click btn in
     !spell_button_handler ();
-    Js._false
-  );
+    listen_for_clicks ()
+  in
+  
+  Lwt.async (fun () -> listen_for_clicks ());
   
   spell_button := Some btn;
   Dom.appendChild parent btn
@@ -69,11 +72,14 @@ let create_pause_button doc parent =
   btn##.style##.zIndex := Js.string "1000";
   
   (* Add event listener *)
-  btn##.onclick := Html.handler (fun _ -> 
+  let rec listen_for_clicks () =
+    let* _event = Js_of_ocaml_lwt.Lwt_js_events.click btn in
     !pause_button_handler ();
-    Js._false
-  );
+    listen_for_clicks ()
+  in
   
+  Lwt.async (fun () -> listen_for_clicks ());
+
   pause_button := Some btn;
   Dom.appendChild parent btn
 
@@ -213,33 +219,22 @@ let create_speed_buttons doc parent =
   ignore (Js.Unsafe.set (Js.Unsafe.get plus_btn##.style) "transition" (Js.string "all 0.2s ease-in-out"));
   ignore (Js.Unsafe.set (Js.Unsafe.get plus_btn##.style) "zIndex" (Js.string "1000"));
   
-  (* Add hover effects *)
-  let add_hover_effects btn base_color hover_color =
-    btn##.onmouseover := Html.handler (fun _ -> 
-      btn##.style##.backgroundColor := Js.string hover_color;
-      ignore (Js.Unsafe.set (Js.Unsafe.get btn##.style) "transform" (Js.string "scale(1.1)"));
-      Js._false
-    );
-    btn##.onmouseout := Html.handler (fun _ -> 
-      btn##.style##.backgroundColor := Js.string base_color;
-      ignore (Js.Unsafe.set (Js.Unsafe.get btn##.style) "transform" (Js.string "scale(1.0)"));
-      Js._false
-    )
+  
+  (* Add event listeners using Lwt *)
+  let rec listen_for_plus_clicks () =
+    let* _event = Js_of_ocaml_lwt.Lwt_js_events.click plus_btn in
+    !speed_plus_handler ();
+    listen_for_plus_clicks ()
   in
   
-  add_hover_effects minus_btn "#E57373" "#EF5350"; (* Lighter to darker red *)
-  add_hover_effects plus_btn "#81C784" "#66BB6A"; (* Lighter to darker green *)
-  
-  (* Add event listeners *)
-  plus_btn##.onclick := Html.handler (fun _ -> 
-    !speed_plus_handler ();
-    Js._false
-  );
-  
-  minus_btn##.onclick := Html.handler (fun _ -> 
+  let rec listen_for_minus_clicks () =
+    let* _event = Js_of_ocaml_lwt.Lwt_js_events.click minus_btn in
     !speed_minus_handler ();
-    Js._false
-  );
+    listen_for_minus_clicks ()
+  in
+  
+  Lwt.async (fun () -> listen_for_plus_clicks ());
+  Lwt.async (fun () -> listen_for_minus_clicks ());
   
   (* Store references *)
   speed_plus_button := Some plus_btn;
@@ -334,33 +329,21 @@ let create_spawn_buttons doc parent =
   ignore (Js.Unsafe.set (Js.Unsafe.get plus_btn##.style) "transition" (Js.string "all 0.2s ease-in-out"));
   ignore (Js.Unsafe.set (Js.Unsafe.get plus_btn##.style) "zIndex" (Js.string "1000"));
   
-  (* Add hover effects *)
-  let add_hover_effects btn base_color hover_color =
-    btn##.onmouseover := Html.handler (fun _ -> 
-      btn##.style##.backgroundColor := Js.string hover_color;
-      ignore (Js.Unsafe.set (Js.Unsafe.get btn##.style) "transform" (Js.string "scale(1.1)"));
-      Js._false
-    );
-    btn##.onmouseout := Html.handler (fun _ -> 
-      btn##.style##.backgroundColor := Js.string base_color;
-      ignore (Js.Unsafe.set (Js.Unsafe.get btn##.style) "transform" (Js.string "scale(1.0)"));
-      Js._false
-    )
+  (* Add event listeners using Lwt *)
+  let rec listen_for_plus_clicks () =
+    let* _event = Js_of_ocaml_lwt.Lwt_js_events.click plus_btn in
+    !spawn_plus_handler ();
+    listen_for_plus_clicks ()
   in
   
-  add_hover_effects minus_btn "#E57373" "#EF5350"; (* Lighter to darker red *)
-  add_hover_effects plus_btn "#81C784" "#66BB6A"; (* Lighter to darker green *)
-  
-  (* Add event listeners *)
-  plus_btn##.onclick := Html.handler (fun _ -> 
-    !spawn_plus_handler ();
-    Js._false
-  );
-  
-  minus_btn##.onclick := Html.handler (fun _ -> 
+  let rec listen_for_minus_clicks () =
+    let* _event = Js_of_ocaml_lwt.Lwt_js_events.click minus_btn in
     !spawn_minus_handler ();
-    Js._false
-  );
+    listen_for_minus_clicks ()
+  in
+  
+  Lwt.async (fun () -> listen_for_plus_clicks ());
+  Lwt.async (fun () -> listen_for_minus_clicks ());
   
   (* Store references *)
   spawn_plus_button := Some plus_btn;
@@ -390,23 +373,14 @@ let create_mean_creet_button doc parent =
   ignore (Js.Unsafe.set (Js.Unsafe.get btn##.style) "boxShadow" (Js.string "0 4px 8px rgba(0,0,0,0.2)"));
   btn##.style##.zIndex := Js.string "1000";
   
-  (* Add hover effects *)
-  btn##.onmouseover := Html.handler (fun _ -> 
-    btn##.style##.backgroundColor := Js.string "#D32F2F"; (* Darker red *)
-    ignore (Js.Unsafe.set (Js.Unsafe.get btn##.style) "transform" (Js.string "scale(1.05)"));
-    Js._false
-  );
-  btn##.onmouseout := Html.handler (fun _ -> 
-    btn##.style##.backgroundColor := Js.string "#F44336"; (* Back to normal red *)
-    ignore (Js.Unsafe.set (Js.Unsafe.get btn##.style) "transform" (Js.string "scale(1.0)"));
-    Js._false
-  );
-  
   (* Add event listener *)
-  btn##.onclick := Html.handler (fun _ -> 
+  let rec listen_for_clicks () =
+    let* _event = Js_of_ocaml_lwt.Lwt_js_events.click btn in
     !mean_creet_handler ();
-    Js._false
-  );
+    listen_for_clicks ()
+  in
+  
+  Lwt.async (fun () -> listen_for_clicks ());
   
   mean_creet_button := Some btn;
   Dom.appendChild parent btn
@@ -428,24 +402,15 @@ let create_berserker_creet_button doc parent =
   ignore (Js.Unsafe.set (Js.Unsafe.get btn##.style) "boxShadow" (Js.string "0 4px 8px rgba(0,0,0,0.2)"));
   btn##.style##.zIndex := Js.string "1000";
   
-  (* Add hover effects *)
-  btn##.onmouseover := Html.handler (fun _ -> 
-    btn##.style##.backgroundColor := Js.string "#7B1FA2"; (* Darker purple *)
-    ignore (Js.Unsafe.set (Js.Unsafe.get btn##.style) "transform" (Js.string "scale(1.05)"));
-    Js._false
-  );
-  btn##.onmouseout := Html.handler (fun _ -> 
-    btn##.style##.backgroundColor := Js.string "#9C27B0"; (* Back to normal purple *)
-    ignore (Js.Unsafe.set (Js.Unsafe.get btn##.style) "transform" (Js.string "scale(1.0)"));
-    Js._false
-  );
-  
   (* Add event listener *)
-  btn##.onclick := Html.handler (fun _ -> 
+  let rec listen_for_clicks () =
+    let* _event = Js_of_ocaml_lwt.Lwt_js_events.click btn in
     !berserker_creet_handler ();
-    Js._false
-  );
+    listen_for_clicks ()
+  in
   
+  Lwt.async (fun () -> listen_for_clicks ());
+
   berserker_creet_button := Some btn;
   Dom.appendChild parent btn
 
@@ -479,10 +444,13 @@ let create_healthy_creet_button doc parent =
   );
   
   (* Add event listener *)
-  btn##.onclick := Html.handler (fun _ -> 
+  let rec listen_for_clicks () =
+    let* _event = Js_of_ocaml_lwt.Lwt_js_events.click btn in
     !healthy_creet_handler ();
-    Js._false
-  );
+    listen_for_clicks ()
+  in
+
+  Lwt.async (fun () -> listen_for_clicks ());
   
   healthy_creet_button := Some btn;
   Dom.appendChild parent btn
