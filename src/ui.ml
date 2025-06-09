@@ -431,18 +431,6 @@ let create_healthy_creet_button doc parent =
   ignore (Js.Unsafe.set (Js.Unsafe.get btn##.style) "boxShadow" (Js.string "0 4px 8px rgba(0,0,0,0.2)"));
   btn##.style##.zIndex := Js.string "1000";
   
-  (* Add hover effects *)
-  btn##.onmouseover := Html.handler (fun _ -> 
-    btn##.style##.backgroundColor := Js.string "#388E3C"; (* Darker green *)
-    ignore (Js.Unsafe.set (Js.Unsafe.get btn##.style) "transform" (Js.string "scale(1.05)"));
-    Js._false
-  );
-  btn##.onmouseout := Html.handler (fun _ -> 
-    btn##.style##.backgroundColor := Js.string "#4CAF50"; (* Back to normal green *)
-    ignore (Js.Unsafe.set (Js.Unsafe.get btn##.style) "transform" (Js.string "scale(1.0)"));
-    Js._false
-  );
-  
   (* Add event listener *)
   let rec listen_for_clicks () =
     let* _event = Js_of_ocaml_lwt.Lwt_js_events.click btn in

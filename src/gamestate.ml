@@ -79,8 +79,9 @@ let reset_game () =
 
 (* Check if all creets are unhealthy (game over condition) *)
 let check_all_creets_health () =
-  if Entity.all_creets_unhealthy !creets then
-    game_over := true
+  if Entity.all_creets_unhealthy !creets then begin
+    game_over := true;
+  end
     
 (* Handle toggle pause button click *)
 let toggle_pause () =

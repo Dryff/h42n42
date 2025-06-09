@@ -45,6 +45,9 @@ let rec spawn_and_speed_loop () =
       Gamestate.last_speed_increase := current_time
     end;
   end;
+
+
+  (* Schedule next spawn and speed increase check *)
   
   ignore (Html.window##setTimeout
     (Js.wrap_callback (fun () -> spawn_and_speed_loop ()))
@@ -61,8 +64,6 @@ let handle_canvas_click canvas ev =
   
   if !Gamestate.game_over && Renderer.is_click_on_replay_button canvas_x canvas_y Gamestate.canvas_width Gamestate.canvas_height then begin
     Movement.stop_all_movements ();
-    
-    (* Clean up existing DOM elements *)
     List.iter Creet_overlay.remove_creet_dom_element !Gamestate.creets;
     
     Gamestate.reset_game ();
@@ -80,6 +81,10 @@ let rec game_loop doc canvas context =
   let current_time = Js.to_float (Js.Unsafe.js_expr "new Date().getTime()") /. 1000. in
   let dt = if !Gamestate.is_paused then 0. else current_time -. !Gamestate.last_time in
   Gamestate.last_time := current_time;
+
+  if !Gamestate.game_over then begin
+    List.iter Creet_overlay.remove_creet_dom_element !Gamestate.creets;
+  end;
 
   (* Update Game if not paused or game over *)
   if not !Gamestate.is_paused && not !Gamestate.game_over then begin
