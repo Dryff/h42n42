@@ -21,9 +21,9 @@ let last_spawn = ref 0.
 let last_speed_increase = ref 0.
 let start_time = ref 0.
 let elapsed_time = ref 0.
-let spell_cooldown = ref 0.  (* Add spell cooldown timer *)
-let spell_circle = ref { x = 0.; y = 0.; radius = 0.; duration = 0.; } (* Spell circle effect *)
-let is_paused = ref false (* Track if the game is paused *)
+let spell_cooldown = ref 0.
+let spell_circle = ref { x = 0.; y = 0.; radius = 0.; duration = 0.; }
+let is_paused = ref false
 
 (* Game configuration *)
 let canvas_width = 800
@@ -43,7 +43,6 @@ let num_hospitals = 4
 
 (* Reset the game to initial state *)
 let reset_game () =
-  (* Reset all game state *)
   game_over := false;
   creets := [];
   dragging := None;

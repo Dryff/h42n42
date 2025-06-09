@@ -40,9 +40,7 @@ let create_spell_button doc parent =
   btn##.style##.borderRadius := Js.string "5px";
   btn##.style##.cursor := Js.string "pointer";
   btn##.style##.margin := Js.string "0 10px";
-  (* Corrected boxShadow property *)
   ignore (Js.Unsafe.set (Js.Unsafe.get btn##.style) "boxShadow" (Js.string "0 4px 8px rgba(0,0,0,0.2)"));
-  (* Add zIndex *)
   btn##.style##.zIndex := Js.string "1000";
   
   (* Add event listener *)
@@ -54,14 +52,11 @@ let create_spell_button doc parent =
   spell_button := Some btn;
   Dom.appendChild parent btn
 
-(* Create the pause button UI element *)
 let create_pause_button doc parent =
   let btn = Html.createButton doc in
   btn##.id := Js.string "pause-button";
   btn##.className := Js.string "pause-button";
   btn##.textContent := Js.some (Js.string "Pause");
-  
-  (* Style the button *)
   btn##.style##.padding := Js.string "10px 15px";
   btn##.style##.fontSize := Js.string "16px";
   btn##.style##.backgroundColor := Js.string "#FF9800"; (* Orange *)
@@ -118,12 +113,10 @@ let create_parameter_button_pair doc parent label =
   ignore (Js.Unsafe.set (Js.Unsafe.get button_row##.style) "justifyContent" (Js.string "space-between"));
   Dom.appendChild param_container button_row;
   
-  (* Create - button *)
+  (* Create +- buttons *)
   let minus_btn = Html.createButton doc in
   minus_btn##.className := Js.string "param-button minus-btn";
   minus_btn##.textContent := Js.some (Js.string "-");
-  
-  (* Style the - button *)
   minus_btn##.style##.padding := Js.string "6px 12px";
   minus_btn##.style##.fontSize := Js.string "14px";
   minus_btn##.style##.backgroundColor := Js.string "#E57373"; (* Light red *)
@@ -134,12 +127,9 @@ let create_parameter_button_pair doc parent label =
   minus_btn##.style##.width := Js.string "48%";
   ignore (Js.Unsafe.set (Js.Unsafe.get minus_btn##.style) "boxShadow" (Js.string "0 2px 4px rgba(0,0,0,0.2)"));
   
-  (* Create + button *)
   let plus_btn = Html.createButton doc in
   plus_btn##.className := Js.string "param-button plus-btn";
   plus_btn##.textContent := Js.some (Js.string "+");
-  
-  (* Style the + button *)
   plus_btn##.style##.padding := Js.string "6px 12px";
   plus_btn##.style##.fontSize := Js.string "14px";
   plus_btn##.style##.backgroundColor := Js.string "#81C784"; (* Light green *)
@@ -184,13 +174,11 @@ let create_speed_buttons doc parent =
   ignore (Js.Unsafe.set (Js.Unsafe.get button_row##.style) "justifyContent" (Js.string "center"));
   Dom.appendChild speed_container button_row;
   
-  (* Create - button *)
+  (* Create +- button *)
   let minus_btn = Html.createButton doc in
   minus_btn##.id := Js.string "speed-minus-button";
   minus_btn##.className := Js.string "speed-button";
   minus_btn##.textContent := Js.some (Js.string "-");
-  
-  (* Style the - button *)
   minus_btn##.style##.padding := Js.string "8px 12px";
   minus_btn##.style##.fontSize := Js.string "18px";
   minus_btn##.style##.fontWeight := Js.string "bold";
@@ -206,13 +194,10 @@ let create_speed_buttons doc parent =
   ignore (Js.Unsafe.set (Js.Unsafe.get minus_btn##.style) "transition" (Js.string "all 0.2s ease-in-out"));
   ignore (Js.Unsafe.set (Js.Unsafe.get minus_btn##.style) "zIndex" (Js.string "1000"));
   
-  (* Create + button *)
   let plus_btn = Html.createButton doc in
   plus_btn##.id := Js.string "speed-plus-button";
   plus_btn##.className := Js.string "speed-button";
   plus_btn##.textContent := Js.some (Js.string "+");
-  
-  (* Style the + button *)
   plus_btn##.style##.padding := Js.string "8px 12px";
   plus_btn##.style##.fontSize := Js.string "18px";
   plus_btn##.style##.fontWeight := Js.string "bold";
@@ -394,8 +379,6 @@ let create_mean_creet_button doc parent =
   btn##.id := Js.string "mean-creet-button";
   btn##.className := Js.string "creet-button";
   btn##.textContent := Js.some (Js.string "Spawn Mean Creet");
-  
-  (* Style the button *)
   btn##.style##.padding := Js.string "10px 15px";
   btn##.style##.fontSize := Js.string "16px";
   btn##.style##.backgroundColor := Js.string "#F44336"; (* Red *)
@@ -434,8 +417,6 @@ let create_berserker_creet_button doc parent =
   btn##.id := Js.string "berserker-creet-button";
   btn##.className := Js.string "creet-button";
   btn##.textContent := Js.some (Js.string "Spawn Berserker Creet");
-  
-  (* Style the button *)
   btn##.style##.padding := Js.string "10px 15px";
   btn##.style##.fontSize := Js.string "16px";
   btn##.style##.backgroundColor := Js.string "#9C27B0"; (* Purple *)
@@ -474,8 +455,6 @@ let create_healthy_creet_button doc parent =
   btn##.id := Js.string "healthy-creet-button";
   btn##.className := Js.string "creet-button";
   btn##.textContent := Js.some (Js.string "Spawn Healthy Creet");
-  
-  (* Style the button *)
   btn##.style##.padding := Js.string "10px 15px";
   btn##.style##.fontSize := Js.string "16px";
   btn##.style##.backgroundColor := Js.string "#4CAF50"; (* Green *)
@@ -539,7 +518,7 @@ let init_ui doc game_div =
   ui_container := Some left_controls;
   Dom.appendChild doc##.body left_controls;
   
-  (* Create timer div at the very top of the page, centered *)
+  (* Create timer container at the very top of the page, centered *)
   let timer_container = Html.createDiv doc in
   timer_container##.id := Js.string "timer-container";
   timer_container##.style##.display := Js.string "flex";
@@ -568,21 +547,14 @@ let init_ui doc game_div =
   timer_div := Some timer;
   Dom.appendChild timer_container timer;
   
-  (* Create pause button - now in left column *)
   create_pause_button doc left_controls;
-  
-  (* Create speed control buttons - now in left column *)
   create_speed_buttons doc left_controls;
-  
-  (* Create spawn rate control buttons - now in left column *)
   create_spawn_buttons doc left_controls;
-  
-  (* Create creet spawn buttons - now in left column *)
   create_mean_creet_button doc left_controls;
   create_berserker_creet_button doc left_controls;
   create_healthy_creet_button doc left_controls;
   
-  (* Create spell button - directly in the game div, positioned at the bottom *)
+  (* Create spell button *)
   let spell_container = Html.createDiv doc in
   spell_container##.style##.cssText := Js.string (
     "position: absolute; \
@@ -615,7 +587,6 @@ let update_timer elapsed =
 
 (* Create parameters UI section *)
 let create_parameters_ui doc parent =
-  (* Create parameters container *)
   let container = Html.createDiv doc in
   container##.id := Js.string "parameters-container";
   container##.style##.position := Js.string "absolute";

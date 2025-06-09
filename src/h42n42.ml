@@ -49,33 +49,27 @@ let handle_canvas_click canvas ev =
   else
     Input.mousedown_handler ~game_over:Gamestate.game_over ~creets:Gamestate.creets ~dragging:Gamestate.dragging ~offset_x:Gamestate.offset_x ~offset_y:Gamestate.offset_y canvas ev
 
-(* Main game loop *)
+
+(* GAME LOOP *)
 let rec game_loop doc canvas context =
-  (* Calculate time delta *)
+  (* Calculate delta time for smooth animation *)
   let current_time = Js.to_float (Js.Unsafe.js_expr "new Date().getTime()") /. 1000. in
   let dt = if !Gamestate.is_paused then 0. else current_time -. !Gamestate.last_time in
   Gamestate.last_time := current_time;
 
-  (* Only update game state if not paused and not game over *)
+  (* Update Game if not paused or game over *)
   if not !Gamestate.is_paused && not !Gamestate.game_over then begin
-    (* Update spell cooldown *)
     Gamestate.update_spell_cooldown dt;
 
-    (* Update and draw creets *)
+    (* Update, draw creets and check collisions *)
     List.iter (fun creet -> 
-      (* Only update creets if game is not over *)
       update_creet creet Gamestate.canvas_width Gamestate.canvas_height dt !Gamestate.creets;
       if not !Gamestate.game_over then
         check_collisions creet !Gamestate.creets;
     ) !Gamestate.creets;
-    
-    (* Check if all creets are unhealthy *)
     Gamestate.check_all_creets_health ();
 
-    (* Calculate elapsed time only if game is not over or paused *)
     Gamestate.elapsed_time := !Gamestate.elapsed_time +. dt;
-
-    (* Update timer below the canvas *)
     Ui.update_timer !Gamestate.elapsed_time;
   end;
 
@@ -100,11 +94,11 @@ let rec game_loop doc canvas context =
   Renderer.render context doc canvas !Gamestate.creets !Gamestate.elapsed_time !Gamestate.game_over spell_circles 
                  (float_of_int !Gamestate.spawn_interval_low) (float_of_int !Gamestate.spawn_interval_high) hospital_config;
 
-  (* Display game over screen if game is over *)
+  (* Game over screen*)
   if !Gamestate.game_over then
     display_game_over context Gamestate.canvas_width Gamestate.canvas_height !Gamestate.elapsed_time !Gamestate.creets;
     
-  (* Display pause overlay if paused *)
+  (* Pause screen *)
   if !Gamestate.is_paused && not !Gamestate.game_over then
     display_pause_overlay context Gamestate.canvas_width Gamestate.canvas_height;
 
@@ -116,17 +110,7 @@ let rec game_loop doc canvas context =
   ));
   Lwt.return ()
 
-(* Handle visibility change to pause/unpause game *)
-let handle_visibility_change _ =
-  let is_hidden = Js.to_bool (Js.Unsafe.js_expr "document.hidden") in
-  Gamestate.is_paused := is_hidden;
-  if is_hidden then
-    Printf.printf "Game paused - window lost focus\n"
-  else
-    Printf.printf "Game resumed - window regained focus\n";
-  Js._false
-
-(* Main initialization function *)
+(* INITIALIZATION OF CANVAS AND UI *)
 let init () =
   let doc = Html.document in
   let body = doc##.body in
@@ -137,7 +121,7 @@ let init () =
   
   (* Add a title *)
   let title = Html.createH1 doc in
-  title##.textContent := Js.some (Js.string "H42N42 Simulation");
+  title##.textContent := Js.some (Js.string "H42N42");
   Dom.appendChild game_div title;
   
   (* Create game container for canvas and parameters *)
@@ -194,13 +178,10 @@ let init () =
     Js._false
   in
     
-  (* Register spell button handler *)
+
+  (* REGISTER GAME SETTINGS UI *)
   Ui.register_spell_button_handler Gamestate.cast_healing_spell;
-  
-  (* Register pause button handler *)
   Ui.register_pause_button_handler Gamestate.toggle_pause;
-  
-  (* Register speed control button handlers *)
   Ui.register_speed_plus_handler (fun () ->
     if not !Gamestate.game_over && not !Gamestate.is_paused then begin
       let new_speed = !Creet.global_speed +. 0.1 in
@@ -209,7 +190,6 @@ let init () =
       Printf.printf "Speed increased to %d%%\n" speed_percentage
     end
   );
-  
   Ui.register_speed_minus_handler (fun () ->
     if not !Gamestate.game_over && not !Gamestate.is_paused then begin
       let new_speed = !Creet.global_speed -. 0.1 in
@@ -218,8 +198,6 @@ let init () =
       Printf.printf "Speed decreased to %d%%\n" speed_percentage
     end
   );
-  
-  (* Register spawn rate control button handlers *)
   Ui.register_spawn_plus_handler (fun () ->
     if not !Gamestate.game_over && not !Gamestate.is_paused then begin
       Gamestate.spawn_interval_low := max 1 (!Gamestate.spawn_interval_low - 1);
@@ -229,7 +207,6 @@ let init () =
         !Gamestate.spawn_interval_low !Gamestate.spawn_interval_high avg_interval
     end
   );
-  
   Ui.register_spawn_minus_handler (fun () ->
     if not !Gamestate.game_over && not !Gamestate.is_paused then begin
       Gamestate.spawn_interval_low := !Gamestate.spawn_interval_low + 1;
@@ -239,17 +216,11 @@ let init () =
         !Gamestate.spawn_interval_low !Gamestate.spawn_interval_high avg_interval
     end
   );
-  
-  (* Register mean creet spawn button handler *)
   Ui.register_mean_creet_handler Gamestate.spawn_mean_creet;
-  
-  (* Register berserker creet spawn button handler *)
   Ui.register_berserker_creet_handler Gamestate.spawn_berserker_creet;
-  
-  (* Register healthy creet spawn button handler *)
   Ui.register_healthy_creet_handler Gamestate.spawn_healthy_creet;
-  
-  (* Start the game loop *)
+
+  (* Start game loop *)
   game_loop doc canvas context
 
 (* Start the application when the page is loaded *)

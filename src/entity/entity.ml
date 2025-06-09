@@ -2,7 +2,6 @@ open Js_of_ocaml
 open Creet
 module Html = Dom_html
 
-(* Create a creet with axis-aligned movement (only horizontal or vertical) *)
 let create_axis_aligned_creet img_src x y =
   (* Choose to move either horizontally or vertically, not both *)
   if Random.bool() then

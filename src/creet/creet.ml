@@ -5,16 +5,16 @@ module Html = Dom_html
 type health_status = Healthy | Contaminated | Berserker | Mean
 
 type creet = {
-  mutable x: float; (* X position *)
-  mutable y: float; (* Y position *)
-  mutable dx: float; (* X velocity - will be non-zero or dy will be non-zero, but not both *)
-  mutable dy: float; (* Y velocity - will be non-zero or dx will be non-zero, but not both *)
+  mutable x: float; 
+  mutable y: float; 
+  mutable dx: float; 
+  mutable dy: float; 
   mutable status: health_status;
-  mutable speed_factor: float; (* Speed factor for the creet *)
+  mutable speed_factor: float; 
   mutable is_dragged: bool;
   mutable size_factor: float;
   mutable last_direction_change: float; (* Per-creet direction change timer *)
-  image: Html.imageElement Js.t (* Image element *)
+  image: Html.imageElement Js.t 
 }
 
 (* Create a new creet - default to healthy status *)
@@ -39,13 +39,8 @@ let update_creet_image creet =
   | Berserker -> creet.image##.src := Js.string "BerserkerCreet.png"
   | Mean -> creet.image##.src := Js.string "MeanCreet.png"
 
-(* Global speed factor *)
 let global_speed = ref 1.0
-
-(* Global hitbox size for creets and static elements *)
 let creet_hitbox_size = 65.
-
-(* Spawn rates for special creet types *)
 let mean_spawn_rate = 10
 let berserker_spawn_rate = 10
 
@@ -60,10 +55,9 @@ let change_status creet new_status =
     else new_status
   in
   creet.status <- final_status;
-  (* Adjust speed factor based on status status *)
   creet.speed_factor <- (match final_status with
-    | Healthy -> 1.0             
-    | Mean -> 1.2 (* Mean creets are faster to catch healthy ones *)
+    | Healthy -> 1.0
+    | Mean -> 1.1
     | _ -> 0.85 
   );
   (* Adjust size_factor: Mean creets are 15% smaller *)
@@ -110,7 +104,7 @@ let update_creet creet canvas_width canvas_height dt all_creets =
   (* Check if it's time to change direction *)
   let current_time = Js.to_float (Js.date##now) /. 1000. in
   
-  (* Special behavior for Mean creets - chase healthy creets *)
+  (* Chasing healthy creets *)
   if creet.status = Mean && not creet.is_dragged then begin
     match find_nearest_healthy_creet creet all_creets with
     | Some target_creet ->
@@ -140,7 +134,6 @@ let update_creet creet canvas_width canvas_height dt all_creets =
           assign_new_direction creet
         end
   end else begin
-    (* Normal behavior for other creets *)
     (* If creet was just released from being dragged, immediately give it a new direction *)
     if not creet.is_dragged && creet.dx = 0. && creet.dy = 0. then begin
       assign_new_direction creet
@@ -151,14 +144,11 @@ let update_creet creet canvas_width canvas_height dt all_creets =
     end
   end;
   
-  (* Update position based on velocity, applying the global speed factor *)
   if creet.is_dragged then begin
-    (* If dragged, set dx and dy to zero *)
     creet.dx <- 0.;
     creet.dy <- 0.;
   end else begin
-    (* Update position based on velocity *)
-    creet.x <- creet.x +. creet.dx *. dt *. 10. *. !global_speed *. creet.speed_factor;
+      creet.x <- creet.x +. creet.dx *. dt *. 10. *. !global_speed *. creet.speed_factor;
     creet.y <- creet.y +. creet.dy *. dt *. 10. *. !global_speed *. creet.speed_factor;
   end;
   
@@ -194,21 +184,84 @@ let update_creet creet canvas_width canvas_height dt all_creets =
     creet.y <- max half_hitbox (min ((float_of_int canvas_height) -. half_hitbox) creet.y);
   end
 
-(* Check for collisions between creets *)
+(* Quadtree for collision detection *)
+type quad_tree = {
+  bounds_x: float; bounds_y: float; bounds_w: float; bounds_h: float;
+  stored_creets: creet list;
+  sub_nodes: quad_tree list;
+}
+
+let make_quad_tree x y w h = {
+  bounds_x = x; bounds_y = y; bounds_w = w; bounds_h = h;
+  stored_creets = [];
+  sub_nodes = [];
+}
+
+let is_point_inside tree px py =
+  px >= tree.bounds_x && px < tree.bounds_x +. tree.bounds_w && 
+  py >= tree.bounds_y && py < tree.bounds_y +. tree.bounds_h
+
+let rec add_creet_to_tree tree creet_item =
+  if not (is_point_inside tree creet_item.x creet_item.y) then 
+    tree
+  else if List.length tree.stored_creets < 4 && tree.sub_nodes = [] then
+    { tree with stored_creets = creet_item :: tree.stored_creets }
+  else
+    let half_width = tree.bounds_w /. 2.0 in
+    let half_height = tree.bounds_h /. 2.0 in
+    let quadrants = if tree.sub_nodes = [] then [
+      make_quad_tree tree.bounds_x tree.bounds_y half_width half_height;
+      make_quad_tree (tree.bounds_x +. half_width) tree.bounds_y half_width half_height;
+      make_quad_tree tree.bounds_x (tree.bounds_y +. half_height) half_width half_height;
+      make_quad_tree (tree.bounds_x +. half_width) (tree.bounds_y +. half_height) half_width half_height;
+    ] else tree.sub_nodes in
+    let new_quadrants = List.map (fun quad -> add_creet_to_tree quad creet_item) quadrants in
+    { tree with sub_nodes = new_quadrants; stored_creets = [] }
+
+let rec find_nearby_creets tree center_x center_y search_radius =
+  let circle_touches_rectangle rx ry rw rh cx cy r =
+    let nearest_x = max rx (min cx (rx +. rw)) in
+    let nearest_y = max ry (min cy (ry +. rh)) in
+    let dist_x = cx -. nearest_x in
+    let dist_y = cy -. nearest_y in
+    (dist_x *. dist_x +. dist_y *. dist_y) <= (r *. r)
+  in
+  
+  if not (circle_touches_rectangle tree.bounds_x tree.bounds_y tree.bounds_w tree.bounds_h center_x center_y search_radius) then 
+    []
+  else
+    let local_matches = List.filter (fun creet_obj ->
+      let dx = creet_obj.x -. center_x in
+      let dy = creet_obj.y -. center_y in
+      (dx *. dx +. dy *. dy) <= (search_radius *. search_radius)
+    ) tree.stored_creets in
+    
+    let child_matches = List.fold_left (fun acc child_node ->
+      (find_nearby_creets child_node center_x center_y search_radius) @ acc
+    ) [] tree.sub_nodes in
+    
+    local_matches @ child_matches
+
+(* Check for collisions between creets using spatial tree *)
 let check_collisions creet all_creets =
-  (* Only process contamination from contaminated to healthy *)
-  if creet.status = Healthy then
-    List.iter (fun other ->
-      (* Skip self-comparison *)
-      if creet != other then
-        let dx = creet.x -. other.x in
-        let dy = creet.y -. other.y in
-        let distance = sqrt(dx *. dx +. dy *. dy) in
-        let collision_radius = creet_hitbox_size *. creet.size_factor in
-        
-        (* If touching a contaminated creet, apply 2% chance of contamination *)
-        if other.status <> Healthy && distance < collision_radius 
-           && not creet.is_dragged && Random.int 100 < 2 then begin
-          change_status creet Contaminated;
-        end;
-    ) all_creets
+  if creet.status = Healthy && not creet.is_dragged then
+    let collision_radius = creet_hitbox_size *. creet.size_factor in
+    
+    (* Build spatial tree with contaminated creets *)
+    let contaminated_creets = List.filter (fun c -> c.status <> Healthy) all_creets in
+    let quad_tree = List.fold_left (fun acc_tree c -> add_creet_to_tree acc_tree c) 
+                      (make_quad_tree 0.0 0.0 800.0 600.0) contaminated_creets in
+    
+    (* Query nearby contaminated creets *)
+    let nearby_creets = find_nearby_creets quad_tree creet.x creet.y collision_radius in
+    
+    let has_contamination = List.exists (fun other ->
+      creet != other &&
+      let dx = creet.x -. other.x in
+      let dy = creet.y -. other.y in
+      let distance_squared = dx *. dx +. dy *. dy in
+      let collision_radius_squared = collision_radius *. collision_radius in
+      distance_squared < collision_radius_squared && Random.int 100 < 2
+    ) nearby_creets in
+    
+    if has_contamination then change_status creet Contaminated
