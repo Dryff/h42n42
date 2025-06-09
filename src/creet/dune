@@ -1,5 +1,0 @@
-(library
- (name creet)
- (modes byte)
- (libraries js_of_ocaml js_of_ocaml-ppx)
- (preprocess (pps js_of_ocaml-ppx)))

@@ -24,7 +24,10 @@ let rec spawn_and_speed_loop () =
       if new_count > old_count then begin
         match !Gamestate.creets with
         | new_creet :: _ -> 
-            Movement.start_creet_movement new_creet Gamestate.canvas_width Gamestate.canvas_height Gamestate.creets
+            Movement.start_creet_movement new_creet Gamestate.canvas_width Gamestate.canvas_height Gamestate.creets;
+            (* Create DOM element for new creet *)
+            Creet_overlay.create_creet_dom_element new_creet
+
         | [] -> ()
       end;
       
@@ -58,15 +61,19 @@ let handle_canvas_click canvas ev =
   
   if !Gamestate.game_over && Renderer.is_click_on_replay_button canvas_x canvas_y Gamestate.canvas_width Gamestate.canvas_height then begin
     Movement.stop_all_movements ();
+    
+    (* Clean up existing DOM elements *)
+    List.iter Creet_overlay.remove_creet_dom_element !Gamestate.creets;
+    
     Gamestate.reset_game ();
     Movement.start_all_movements Gamestate.canvas_width Gamestate.canvas_height Gamestate.creets;
+    
+    (* Create DOM elements for new creets *)
+    Creet_overlay.create_dom_elements_for_creets !Gamestate.creets;
 
     Js._true
-  end else if !Gamestate.game_over then
+  end else
     Js._false
-  else
-    Input.mousedown_handler ~game_over:Gamestate.game_over ~creets:Gamestate.creets ~dragging:Gamestate.dragging ~offset_x:Gamestate.offset_x ~offset_y:Gamestate.offset_y canvas ev
-
 
 (* GAME LOOP *)
 let rec game_loop doc canvas context =
@@ -81,6 +88,11 @@ let rec game_loop doc canvas context =
     Gamestate.check_all_creets_health ();
     Gamestate.elapsed_time := !Gamestate.elapsed_time +. dt;
     Ui.update_timer !Gamestate.elapsed_time;
+    
+    (* Update DOM element positions *)
+    Creet_overlay.update_all_dom_elements !Gamestate.creets;
+
+    List.iter Creet_overlay.update_dom_element_texture !Gamestate.creets;
   end;
                         
   (* Draw background and static elements *)
@@ -116,28 +128,9 @@ let rec handle_canvas_mousedown_events canvas =
   let _ = handle_canvas_click canvas event in
   handle_canvas_mousedown_events canvas
 
-let rec handle_document_mousemove_events canvas =
-  let* event = Js_of_ocaml_lwt.Lwt_js_events.mousemove Html.document in
-  let _ = Input.mousemove_handler
-    ~dragging:Gamestate.dragging 
-    ~canvas_width:Gamestate.canvas_width 
-    ~canvas_height:Gamestate.canvas_height 
-    ~offset_x:Gamestate.offset_x 
-    ~offset_y:Gamestate.offset_y 
-    canvas event in
-  handle_document_mousemove_events canvas
-
-let rec handle_document_mouseup_events () =
-  let* _event = Js_of_ocaml_lwt.Lwt_js_events.mouseup Html.document in
-  let _ = Input.mouseup_handler ~dragging:Gamestate.dragging () in
-  handle_document_mouseup_events ()
-
-(* Setup all mouse event loops *)
+(* Setup mouse event loops - simplified since DOM elements handle their own dragging *)
 let setup_mouse_events canvas =
-  Lwt.async (fun () -> handle_canvas_mousedown_events canvas);
-  Lwt.async (fun () -> handle_document_mousemove_events canvas);
-  Lwt.async (fun () -> handle_document_mouseup_events ())
-
+  Lwt.async (fun () -> handle_canvas_mousedown_events canvas)
 
 (* INITIALIZATION OF CANVAS AND UI *)
 let init () =
@@ -169,10 +162,13 @@ let init () =
   canvas##.style##.left := Js.string "0";
   canvas##.style##.top := Js.string "0";
 
+  (* Initialize overlay container *)
+  let _ = Creet_overlay.init_overlay_container canvas in
+
   (* Add timer div below the canvas *)
   Ui.init_ui doc game_div;
 
-  (* NEW: Setup Lwt mouse event loops *)
+  (* Setup mouse event loops *)
   setup_mouse_events canvas;
   
   (* Get canvas 2D context *)
@@ -183,6 +179,9 @@ let init () =
   
   (* Initialize game state *)
   Gamestate.reset_game ();
+
+  (* Create DOM elements for initial creets *)
+  Creet_overlay.create_dom_elements_for_creets !Gamestate.creets;
 
   (* Start movement threads for initial creets *)
   Movement.start_all_movements Gamestate.canvas_width Gamestate.canvas_height Gamestate.creets;
@@ -206,6 +205,17 @@ let init () =
     Js._false
   in
     
+  (* Register spawn button handlers with DOM element creation *)
+  let spawn_with_dom spawn_fn = fun () ->
+    let old_count = List.length !Gamestate.creets in
+    spawn_fn ();
+    let new_count = List.length !Gamestate.creets in
+    if new_count > old_count then begin
+      match !Gamestate.creets with
+      | new_creet :: _ -> Creet_overlay.create_creet_dom_element new_creet
+      | [] -> ()
+    end
+  in
 
   (* REGISTER GAME SETTINGS UI *)
   Ui.register_spell_button_handler Gamestate.cast_healing_spell;
@@ -245,13 +255,10 @@ let init () =
     end
   );
 
-(* Register button handlers *)
-Ui.register_mean_creet_handler (fun () -> 
-  Movement.spawn_mean_creet ());
-Ui.register_berserker_creet_handler (fun () -> 
-  Movement.spawn_berserker_creet ());
-Ui.register_healthy_creet_handler (fun () -> 
-  Movement.spawn_healthy_creet ());
+(* Register button handlers with DOM element creation *)
+Ui.register_mean_creet_handler (spawn_with_dom Movement.spawn_mean_creet);
+Ui.register_berserker_creet_handler (spawn_with_dom Movement.spawn_berserker_creet);
+Ui.register_healthy_creet_handler (spawn_with_dom Movement.spawn_healthy_creet);
 
   (* Start game loop *)
   game_loop doc canvas context

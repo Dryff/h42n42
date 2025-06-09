@@ -1,5 +1,0 @@
-(library
- (name ui)
- (modes byte)
- (libraries js_of_ocaml js_of_ocaml-ppx js_of_ocaml-lwt lwt_ppx)
- (preprocess (pps js_of_ocaml-ppx)))

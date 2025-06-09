@@ -14,7 +14,8 @@ type creet = {
   mutable is_dragged: bool;
   mutable size_factor: float;
   mutable last_direction_change: float; (* Per-creet direction change timer *)
-  image: Html.imageElement Js.t 
+  image: Html.imageElement Js.t;
+  mutable dom_element: Html.divElement Js.t option;
 }
 
 (* Create a new healthy creet *)
@@ -28,7 +29,8 @@ let create_creet img_src x y dx dy =
     speed_factor = 1.0; 
     is_dragged = false; 
     size_factor = 1.0; 
-    last_direction_change = Js.to_float (Js.date##now) /. 1000.
+    last_direction_change = Js.to_float (Js.date##now) /. 1000.;
+    dom_element = None;
   }
 
 (* Update creet's image based on status status *)
@@ -38,6 +40,7 @@ let update_creet_image creet =
   | Contaminated -> creet.image##.src := Js.string "ContaminatedCreet.png"
   | Berserker -> creet.image##.src := Js.string "BerserkerCreet.png"
   | Mean -> creet.image##.src := Js.string "MeanCreet.png"
+
 
 let global_speed = ref 1.0
 let creet_hitbox_size = 65.
