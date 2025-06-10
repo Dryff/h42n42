@@ -35,7 +35,7 @@ let rec creet_movement_thread creet canvas_width canvas_height all_creets =
     
   end;
 
-  let* () = sleep 0.01 in
+  let* () = sleep 0.016 in
   
   if state.is_running then
     creet_movement_thread creet canvas_width canvas_height all_creets

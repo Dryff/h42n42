@@ -231,6 +231,7 @@ let rec add_creet_to_tree tree creet_item =
 
 (* Find all creets within search radius of a center point *)
 let rec find_nearby_creets tree center_x center_y search_radius =
+   (* Helper func: Does a circle touch a rectangle? *)
   let circle_touches_rectangle rx ry rw rh cx cy r =
     let nearest_x = max rx (min cx (rx +. rw)) in  
     let nearest_y = max ry (min cy (ry +. rh)) in
