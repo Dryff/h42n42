@@ -111,7 +111,7 @@ let update_creet creet canvas_width canvas_height dt all_creets =
         let dy = target_creet.y -. creet.y in
         let distance = sqrt(dx *. dx +. dy *. dy) in
         
-        (* Only change direction if target is somewhat far away *)
+        (* Only change direction if target is far away *)
         if distance > 20.0 || (creet.dx = 0. && creet.dy = 0.) then begin
           (* Focus on either horizontal or vertical movement based on which is larger *)
           if abs_float dx > abs_float dy then begin
@@ -184,10 +184,8 @@ let update_creet creet canvas_width canvas_height dt all_creets =
     creet.y <- max half_hitbox (min ((float_of_int canvas_height) -. half_hitbox) creet.y);
   end
 
-
-
   
-(* Quadtree: Divides 2D space into 4 quadrants for efficient spatial queries *)
+(* Quadtree*)
 type quad_tree = {
   bounds_x: float; bounds_y: float; bounds_w: float; bounds_h: float; 
   stored_creets: creet list;  
