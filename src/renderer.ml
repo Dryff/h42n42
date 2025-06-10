@@ -255,7 +255,6 @@ let render context doc canvas creets elapsed game_over is_paused spell_circles s
   let canvas_width = canvas##.width in
   let canvas_height = canvas##.height in
   
-  (* Clear canvas *)
   context##clearRect
     (Js.number_of_float 0.)
     (Js.number_of_float 0.)
@@ -265,10 +264,8 @@ let render context doc canvas creets elapsed game_over is_paused spell_circles s
   (* Draw background elements and hospitals *)
   draw_background_elements context doc canvas_width canvas_height hospital_config creets spawn_interval_low spawn_interval_high;
 
-  (* Draw all creets *)
+  (* Draw creets & spell circles *)
   List.iter (draw_creet context) creets;
-
-  (* Draw all spell circles *)
   List.iter (draw_spell_circle context) spell_circles;
   
   (* Display game over screen if needed *)

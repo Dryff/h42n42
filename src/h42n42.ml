@@ -12,8 +12,8 @@ let create_canvas parent width height =
 (* Periodic spawning and speed increase function *)
 let rec spawn_and_speed_loop () =
   let current_time = Js.to_float (Js.Unsafe.js_expr "new Date().getTime()") /. 1000. in
-  
-  (* Only spawn if the game is not over *)
+
+  (* Only spawn if the game is not over and not paused *)
   if not !Gamestate.game_over && not !Gamestate.is_paused then begin
     (* Check if it's time to spawn a new creet *)
     if current_time -. !Gamestate.last_spawn >= !Gamestate.spawn_interval then begin
@@ -21,23 +21,21 @@ let rec spawn_and_speed_loop () =
       Gamestate.spawn_creet ();
       let new_count = List.length !Gamestate.creets in
 
+      (* If a new creet was spawned, start its movement and create its DOM element *)
       if new_count > old_count then begin
         match !Gamestate.creets with
         | new_creet :: _ -> 
             Movement.start_creet_movement new_creet Gamestate.canvas_width Gamestate.canvas_height Gamestate.creets;
-            (* Create DOM element for new creet *)
             Creet_overlay.create_creet_dom_element new_creet
-
         | [] -> ()
       end;
       
       Gamestate.last_spawn := current_time;
-      (* Set new random spawn interval based on current range *)
       Gamestate.spawn_interval := float_of_int !Gamestate.spawn_interval_low +. 
                                   Random.float (float_of_int (!Gamestate.spawn_interval_high - !Gamestate.spawn_interval_low));
     end;
     
-    (* Check if it's time to increase the global speed *)
+    (* Increasing global speed *)
     if current_time -. !Gamestate.last_speed_increase >= Gamestate.speed_increase_interval then begin
       Creet.global_speed := !Creet.global_speed +. Gamestate.speed_increase_factor;
       let speed_percentage = int_of_float (!Creet.global_speed *. 100.) in
@@ -46,15 +44,12 @@ let rec spawn_and_speed_loop () =
     end;
   end;
 
-
-  (* Schedule next spawn and speed increase check *)
-  
   ignore (Html.window##setTimeout
     (Js.wrap_callback (fun () -> spawn_and_speed_loop ()))
     (Js.number_of_float 1000.)
   )
 
-(* Handle mouse clicks including the replay button *)
+(* Handle mouse clicks on replay button *)
 let handle_canvas_click canvas ev =
   let mouse_x = Js.to_float ev##.clientX in
   let mouse_y = Js.to_float ev##.clientY in
@@ -69,7 +64,6 @@ let handle_canvas_click canvas ev =
     Gamestate.reset_game ();
     Movement.start_all_movements Gamestate.canvas_width Gamestate.canvas_height Gamestate.creets;
     
-    (* Create DOM elements for new creets *)
     Creet_overlay.create_dom_elements_for_creets !Gamestate.creets;
 
     Js._true
@@ -119,6 +113,10 @@ let rec game_loop doc canvas context =
   (* Render everything *)
   Renderer.render context doc canvas !Gamestate.creets !Gamestate.elapsed_time !Gamestate.game_over !Gamestate.is_paused spell_circles 
                  (float_of_int !Gamestate.spawn_interval_low) (float_of_int !Gamestate.spawn_interval_high) hospital_config;
+
+  List.iter (fun creet -> 
+      Creet.check_collisions creet !Gamestate.creets
+    ) !Gamestate.creets;
 
   (* Request next animation frame *)
   ignore (Html.window##requestAnimationFrame(

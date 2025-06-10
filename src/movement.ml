@@ -35,9 +35,6 @@ let rec creet_movement_thread creet canvas_width canvas_height all_creets =
     (* Always update with consistent timestep *)
     Creet.update_creet creet canvas_width canvas_height fixed_dt !all_creets;
     
-    (* Check collisions for this creet *)
-    if not !Gamestate.game_over then
-      Creet.check_collisions creet !all_creets;
   end;
 
   (* Sleep for exactly 33.33ms (30 FPS) *)
