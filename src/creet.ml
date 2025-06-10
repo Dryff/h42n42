@@ -160,24 +160,25 @@ let update_creet creet canvas_width canvas_height dt all_creets =
 
   (* Check for collision with river *)
   let river_height = 20. in
-  if creet.y -. creet_hitbox_size <= river_height && creet.status = Healthy && not creet.is_dragged then begin
+  let scaled_hitbox = (creet_hitbox_size *. creet.size_factor) /. 2. in
+  if creet.y -. scaled_hitbox <= river_height && creet.status = Healthy && not creet.is_dragged then begin
     change_status creet Contaminated;
   end;
 
   (* Check for collision with hospital *)
   let hospital_y = float_of_int canvas_height -. 20. in
-  if creet.y +. creet_hitbox_size >= hospital_y && creet.status <> Healthy && creet.is_dragged then begin
+  if creet.y +. scaled_hitbox >= hospital_y && creet.status <> Healthy && creet.is_dragged then begin
     change_status creet Healthy;
   end;  
 
   (* Bounce off left and right borders *)
-  let half_hitbox = creet_hitbox_size /. 2. in
+  let half_hitbox = scaled_hitbox in
   if creet.x < half_hitbox || creet.x > (float_of_int canvas_width) -. half_hitbox then begin
     creet.dx <- -.creet.dx;
     creet.x <- max half_hitbox (min ((float_of_int canvas_width) -. half_hitbox) creet.x);
   end;
   
-  (* Bounce off top and bottom borders, accounting for image height *)
+  (* Bounce off top and bottom borders, accounting for scaled size *)
   if creet.y < half_hitbox || creet.y > (float_of_int canvas_height) -. half_hitbox then begin
     creet.dy <- -.creet.dy;
     creet.y <- max half_hitbox (min ((float_of_int canvas_height) -. half_hitbox) creet.y);
@@ -256,11 +257,12 @@ let check_collisions creet all_creets =
     
     let has_contamination = List.exists (fun other ->
       creet != other &&
-      let dx = creet.x -. other.x in
-      let dy = creet.y -. other.y in
-      let distance_squared = dx *. dx +. dy *. dy in
-      let collision_radius_squared = collision_radius *. collision_radius in
-      distance_squared < collision_radius_squared && Random.int 100 < 2
+      let creet_half_size = (creet_hitbox_size *. creet.size_factor) /. 2. in
+      let other_half_size = (creet_hitbox_size *. other.size_factor) /. 2. in
+      (* Check if rectangles overlap *)
+      abs_float (creet.x -. other.x) < (creet_half_size +. other_half_size) &&
+      abs_float (creet.y -. other.y) < (creet_half_size +. other_half_size) &&
+      Random.int 100 < 2
     ) nearby_creets in
     
     if has_contamination then change_status creet Contaminated

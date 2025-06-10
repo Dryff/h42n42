@@ -28,7 +28,7 @@ let draw_creet context creet =
     (float_to_js image_draw_y)
     (float_to_js size)
     (float_to_js size);
-  if !Input.show_hitboxes then begin
+  if !Input.debug_mode then begin
     let hitbox_color = match creet.status with
       | Mean -> "#FF0000"      (* Red *)
       | Berserker -> "#FF69B4" (* Pink *)
@@ -151,7 +151,7 @@ let draw_background_elements context doc canvas_width canvas_height (hospital_wi
     (Js.number_of_float 0.)
     (Js.number_of_float (float_of_int canvas_width))
     (Js.number_of_float 50.);
-  if !Input.show_hitboxes then (
+  if !Input.debug_mode then (
     context##.strokeStyle := Js.string "#aa00FF"; (* Blue for river *)
     context##.lineWidth := Js.number_of_float 2.;
     context##strokeRect
@@ -172,7 +172,7 @@ let draw_background_elements context doc canvas_width canvas_height (hospital_wi
       (Js.number_of_float hospital_y)
       (Js.number_of_float hospital_width)
       (Js.number_of_float hospital_height);
-    if !Input.show_hitboxes then (
+    if !Input.debug_mode then (
       context##.strokeStyle := Js.string "#0095ff";
       context##.lineWidth := Js.number_of_float 2.;
       context##strokeRect
@@ -184,7 +184,7 @@ let draw_background_elements context doc canvas_width canvas_height (hospital_wi
   done;
   
   (* DEBUG MODE TEXT *)
-  if !Input.show_hitboxes then begin
+  if !Input.debug_mode then begin
     context##.fillStyle := Js.string "#000000";
     context##.font := Js.string "16px Arial";
     let speed_text = Printf.sprintf "Speed: %d%%" (int_of_float (!Creet.global_speed *. 100.)) in

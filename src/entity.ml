@@ -25,36 +25,7 @@ let create_random_creet img_src canvas_width canvas_height =
 let create_random_healthy_creet canvas_width canvas_height =
   create_random_creet "HealthyCreet.png" canvas_width canvas_height
 
-(* Check if a point is within a creet's hitbox *)
-let is_point_inside_creet creet x y =
-  let scaled_width = Creet.creet_hitbox_size *. creet.size_factor in
-  let scaled_height = Creet.creet_hitbox_size *. creet.size_factor in
-  
-  x >= creet.x -. (scaled_width /. 2.) && 
-  x <= creet.x +. (scaled_width /. 2.) &&
-  y >= creet.y -. (scaled_height /. 2.) && 
-  y <= creet.y +. (scaled_height /. 2.)
-
-(* Find a creet at the given position *)
-let find_creet_at_position creets x y =
-  let found = ref None in
-  List.iter (fun creet ->
-    if is_point_inside_creet creet x y then
-      found := Some creet
-  ) creets;
-  !found
-
 (* Check if all creets are unhealthy (game over condition) *)
 let all_creets_unhealthy creets =
   List.for_all (fun creet -> creet.status <> Healthy) creets && 
   List.length creets > 0
-
-(* Create initial set of creets *)
-let create_initial_creets count canvas_width canvas_height =
-  let rec create_creets n acc =
-    if n <= 0 then acc
-    else 
-      let new_creet = create_random_healthy_creet canvas_width canvas_height in
-      create_creets (n-1) (new_creet :: acc)
-  in
-  create_creets count []

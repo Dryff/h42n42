@@ -431,7 +431,6 @@ let create_healthy_creet_button doc parent =
   ignore (Js.Unsafe.set (Js.Unsafe.get btn##.style) "boxShadow" (Js.string "0 4px 8px rgba(0,0,0,0.2)"));
   btn##.style##.zIndex := Js.string "1000";
   
-  (* Add event listener *)
   let rec listen_for_clicks () =
     let* _event = Js_of_ocaml_lwt.Lwt_js_events.click btn in
     !healthy_creet_handler ();
@@ -446,11 +445,8 @@ let create_healthy_creet_button doc parent =
 (* Register handlers for creet spawn buttons *)
 let register_mean_creet_handler handler =
   mean_creet_handler := handler
-
 let register_berserker_creet_handler handler =
   berserker_creet_handler := handler
-
-(* Register handlers for additional creet spawn buttons *)
 let register_healthy_creet_handler handler =
   healthy_creet_handler := handler
 
