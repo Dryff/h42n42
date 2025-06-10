@@ -77,13 +77,11 @@ let reset_game () =
     spawn_creet ()
   done
 
-(* Check if all creets are unhealthy (game over condition) *)
+(* Check if all creets are unhealthy (game over) *)
 let check_all_creets_health () =
-  if Entity.all_creets_unhealthy !creets then begin
-    game_over := true;
-  end
-    
-(* Handle toggle pause button click *)
+  if List.for_all (fun creet -> creet.status <> Healthy) !creets && List.length !creets > 0 then
+    game_over := true
+
 let toggle_pause () =
   is_paused := not !is_paused;
   Ui.update_pause_button_state !is_paused;
@@ -96,12 +94,10 @@ let toggle_pause () =
 (* Cast healing spell function *)
 let cast_healing_spell () =
   if !spell_cooldown <= 0. && not !game_over then begin
-    (* Create spell circle effect in the middle of the canvas *)
+    (* Create spell circle effect in the middle of the canvas randomly*)
     let center_x = float_of_int canvas_width /. 2.0 in
     let center_y = float_of_int canvas_height /. 2.0 in
-    let offset_range = 150.0 in (* Maximum offset from center *)
-    
-    (* Generate random position within the middle area *)
+    let offset_range = 150.0 in
     let random_x = center_x +. (Random.float (2.0 *. offset_range) -. offset_range) in
     let random_y = center_y +. (Random.float (2.0 *. offset_range) -. offset_range) in
     let circle_radius = 200. in
@@ -110,12 +106,11 @@ let cast_healing_spell () =
       x = random_x; 
       y = random_y; 
       radius = circle_radius;
-      duration = 2.0; (* Show for 2 seconds *)
+      duration = 2.0;
     };
     
     (* Check which creets are inside the circle and convert only those *)
     creets := List.map (fun creet -> 
-      (* Calculate distance from creet to circle center *)
       let creet_val : Creet.creet = creet in
   
   (* Calculate distance from creet to circle center *)
@@ -133,10 +128,8 @@ let cast_healing_spell () =
         creet
     ) !creets;
     
-    (* Set cooldown to 5 seconds *)
     spell_cooldown := 5.;
     
-    Printf.printf "Healing spell cast! Cooldown: 5 seconds\n";
   end
 
 (* Update spell cooldown *)

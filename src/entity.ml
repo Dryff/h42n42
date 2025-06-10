@@ -24,8 +24,3 @@ let create_random_creet img_src canvas_width canvas_height =
 (* Create a healthy creet at a random position *)
 let create_random_healthy_creet canvas_width canvas_height =
   create_random_creet "HealthyCreet.png" canvas_width canvas_height
-
-(* Check if all creets are unhealthy (game over condition) *)
-let all_creets_unhealthy creets =
-  List.for_all (fun creet -> creet.status <> Healthy) creets && 
-  List.length creets > 0

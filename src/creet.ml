@@ -102,8 +102,8 @@ let find_nearest_healthy_creet creet all_creets =
 (* Update creet position, handle bouncing, and check for river/hospital contact *)
 let update_creet creet canvas_width canvas_height dt all_creets =
   let current_time = Js.to_float (Js.date##now) /. 1000. in
-  
-  (* Chasing healthy creets *)
+
+  (* Handling mean creet behavior and regular creets direction changes *)
   if creet.status = Mean && not creet.is_dragged then begin
     match find_nearest_healthy_creet creet all_creets with
     | Some target_creet ->
@@ -184,6 +184,9 @@ let update_creet creet canvas_width canvas_height dt all_creets =
     creet.y <- max half_hitbox (min ((float_of_int canvas_height) -. half_hitbox) creet.y);
   end
 
+
+
+  
 (* Quadtree: Divides 2D space into 4 quadrants for efficient spatial queries *)
 type quad_tree = {
   bounds_x: float; bounds_y: float; bounds_w: float; bounds_h: float; 

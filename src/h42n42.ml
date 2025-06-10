@@ -114,10 +114,6 @@ let rec game_loop doc canvas context =
   Renderer.render context doc canvas !Gamestate.creets !Gamestate.elapsed_time !Gamestate.game_over !Gamestate.is_paused spell_circles 
                  (float_of_int !Gamestate.spawn_interval_low) (float_of_int !Gamestate.spawn_interval_high) hospital_config;
 
-  List.iter (fun creet -> 
-      Creet.check_collisions creet !Gamestate.creets
-    ) !Gamestate.creets;
-
   (* Request next animation frame *)
   ignore (Html.window##requestAnimationFrame(
     Js.wrap_callback (fun _ -> 
@@ -159,12 +155,6 @@ let init () =
   (* Create our game canvas *)
   let canvas = create_canvas game_container Gamestate.canvas_width Gamestate.canvas_height in
   
-  (* Set custom cursor for the entire canvas *)
-  canvas##.style##.cursor := Js.string "pointer";
-  canvas##.style##.position := Js.string "absolute";
-  canvas##.style##.left := Js.string "0";
-  canvas##.style##.top := Js.string "0";
-
   (* Initialize overlay container *)
   let _ = Creet_overlay.init_overlay_container canvas in
 
@@ -183,19 +173,14 @@ let init () =
   (* Initialize game state *)
   Gamestate.reset_game ();
 
-  (* Create DOM elements for initial creets *)
   Creet_overlay.create_dom_elements_for_creets !Gamestate.creets;
-
-  (* Start movement threads for initial creets *)
   Movement.start_all_movements Gamestate.canvas_width Gamestate.canvas_height Gamestate.creets;
-  
-  (* Start spawning creets and increasing speed *)
   spawn_and_speed_loop ();
 
-  (* Register keydown handler for toggling hitboxes *)
+  (* Register keydown handler to toggle debug mode *)
   Dom_html.window##.onkeydown := Dom_html.handler Input.keydown_handler;
 
-  (* Register visibility change handler to pause/unpause *)
+  (* Register handler to pause/unpause *)
   let _ = Dom_html.addEventListener Dom_html.document 
     (Dom_html.Event.make "visibilitychange")
     (Dom_html.handler (fun _ ->
