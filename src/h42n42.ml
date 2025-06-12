@@ -83,6 +83,19 @@ let rec game_loop doc canvas context =
   (* Update Game if not paused or game over *)
   if not !Gamestate.is_paused && not !Gamestate.game_over then begin
     Gamestate.update_spell_cooldown dt;
+
+    (* Filter out dead creets and clean up their resources *)
+    let alive_creets = List.filter (fun creet -> creet.Creet.status <> Creet.Dead) !Gamestate.creets in
+    let dead_creets = List.filter (fun creet -> creet.Creet.status = Creet.Dead) !Gamestate.creets in
+    
+    (* Clean up dead creets' movement threads and DOM elements *)
+    List.iter (fun creet -> 
+      Movement.stop_creet_movement creet;
+      Creet_overlay.remove_creet_dom_element creet
+    ) dead_creets;
+    
+    (* Update the creets list to only contain alive creets *)
+    Gamestate.creets := alive_creets;
     
     Gamestate.check_all_creets_health ();
     Gamestate.elapsed_time := !Gamestate.elapsed_time +. dt;

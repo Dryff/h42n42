@@ -2,7 +2,9 @@ open Js_of_ocaml
 module Html = Dom_html
 
 (* status status type *)
-type health_status = Healthy | Contaminated | Berserker | Mean
+type health_status = Healthy | Contaminated | Berserker | Mean | Dead
+let time_to_die = 30.0 
+
 
 type creet = {
   mutable x: float; 
@@ -14,6 +16,7 @@ type creet = {
   mutable is_dragged: bool;
   mutable size_factor: float;
   mutable last_direction_change: float; (* Per-creet direction change timer *)
+  mutable contamination_timer: float; (* Timer for contamination effect *)
   image: Html.imageElement Js.t;
   mutable dom_element: Html.divElement Js.t option;
 }
@@ -31,6 +34,7 @@ let create_creet img_src x y dx dy =
     size_factor = 1.0; 
     last_direction_change = Js.to_float (Js.date##now) /. 1000.;
     dom_element = None;
+    contamination_timer = 0.0;
   }
 
 (* Update creet's image based on status status *)
@@ -39,7 +43,7 @@ let update_creet_image creet =
   | Healthy -> creet.image##.src := Js.string "HealthyCreet.png"
   | Contaminated -> creet.image##.src := Js.string "ContaminatedCreet.png"
   | Berserker -> creet.image##.src := Js.string "BerserkerCreet.png"
-  | Mean -> creet.image##.src := Js.string "MeanCreet.png"
+  | _ -> creet.image##.src := Js.string "MeanCreet.png"
 
 
 let global_speed = ref 1.0
@@ -48,6 +52,8 @@ let mean_spawn_rate = 10
 let berserker_spawn_rate = 10
 
 let change_status creet new_status =
+  let current_time = Js.to_float (Js.date##now) /. 1000. in
+  (* Pick status *)
   let final_status = 
     if new_status = Contaminated then
       let roll = Random.int 100 in
@@ -57,9 +63,16 @@ let change_status creet new_status =
     else new_status
   in
   creet.status <- final_status;
+
+  (* Track contamination time *)
+  if final_status = Contaminated || final_status = Berserker || final_status = Mean then
+    creet.contamination_timer <- current_time
+  else if final_status = Healthy then
+    creet.contamination_timer <- 0.0;
+
   creet.speed_factor <- (match final_status with
     | Healthy -> 1.0
-    | Mean -> 1.1
+    | Mean -> 1.2
     | _ -> 0.85 
   );
   creet.size_factor <- (match final_status with
@@ -71,7 +84,7 @@ let change_status creet new_status =
   update_creet_image creet
 
 let assign_new_direction creet =
-  let base_speed = 10. in
+  let base_speed = 20. in
   if Random.bool () then begin
     creet.dx <- (if Random.bool () then base_speed else -.base_speed);
     creet.dy <- 0.
@@ -99,9 +112,18 @@ let find_nearest_healthy_creet creet all_creets =
   
   !nearest_creet
 
+let should_creet_die creet current_time =
+  (creet.status = Contaminated || creet.status = Berserker || creet.status = Mean) &&
+  creet.contamination_timer > 0.0 &&
+  (current_time -. creet.contamination_timer) >= time_to_die
+
 (* Update creet position, handle bouncing, and check for river/hospital contact *)
 let update_creet creet canvas_width canvas_height dt all_creets =
   let current_time = Js.to_float (Js.date##now) /. 1000. in
+
+  if should_creet_die creet current_time then begin
+    creet.status <- Dead;
+  end;
 
   (* Handling mean creet behavior and regular creets direction changes *)
   if creet.status = Mean && not creet.is_dragged then begin
@@ -115,11 +137,11 @@ let update_creet creet canvas_width canvas_height dt all_creets =
         if distance > 20.0 || (creet.dx = 0. && creet.dy = 0.) then begin
           (* Focus on either horizontal or vertical movement based on which is larger *)
           if abs_float dx > abs_float dy then begin
-            creet.dx <- (if dx > 0. then 10. else -10.);
+            creet.dx <- (if dx > 0. then 20. else -20.);
             creet.dy <- 0.;
           end else begin
             creet.dx <- 0.;
-            creet.dy <- (if dy > 0. then 10. else -10.);
+            creet.dy <- (if dy > 0. then 20. else -20.);
           end;
           
           (* Reset direction change timer *)

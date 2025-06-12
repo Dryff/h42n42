@@ -6,12 +6,12 @@ let create_axis_aligned_creet img_src x y =
   (* Choose to move either horizontally or vertically, not both *)
   if Random.bool() then
     (* Horizontal movement *)
-    let base_speed = 10. in
+    let base_speed = 20. in
     let dx = if Random.bool() then base_speed else -.base_speed in
     create_creet img_src x y dx 0.
   else
     (* Vertical movement *)
-    let base_speed = 10. in
+    let base_speed = 20. in
     let dy = if Random.bool() then base_speed else -.base_speed in
     create_creet img_src x y 0. dy
 

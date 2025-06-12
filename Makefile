@@ -4,7 +4,7 @@ all: build
 
 # Build the project
 build:
-	chmod 644 static/h42n42.js
+	rm -rf static/h42n42.js
 	dune build
 	cp _build/default/src/h42n42.bc.js static/h42n42.js
 

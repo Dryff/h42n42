@@ -33,7 +33,7 @@ let draw_creet context creet =
       | Mean -> "#FF0000"      (* Red *)
       | Berserker -> "#FF69B4" (* Pink *)
       | Contaminated -> "#FF8C00" (* Dark Orange *)
-      | Healthy -> "#00FF00"   (* Green *)
+      | _ -> "#00FF00"   (* Green *)
     in
     context##.strokeStyle := Js.string hitbox_color;
     context##.lineWidth := Js.number_of_float 2.;

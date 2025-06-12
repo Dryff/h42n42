@@ -32,7 +32,7 @@ let spawn_interval_low = ref 2
 let spawn_interval_high = ref 6
 let spawn_interval = ref 0. (* Will be initialized in reset_game *)
 let speed_increase_interval = 0.2
-let speed_increase_factor = 0.01
+let speed_increase_factor = 0.02
 
 (* Hospital configuration *)
 let hospital_width = 170.
@@ -46,7 +46,7 @@ let spawn_creet () =
   (* Define the missing variables *)
   let spawn_x = Random.float (float_of_int canvas_width) in
   let spawn_y = Random.float (float_of_int canvas_height) in
-  let spawn_dx = 10. in
+  let spawn_dx = 20. in
   let spawn_dy = 0. in
   
   let new_creet = Creet.create_creet "HealthyCreet.png" spawn_x spawn_y spawn_dx spawn_dy in

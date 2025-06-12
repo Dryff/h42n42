@@ -12,7 +12,7 @@ let update_dom_element_texture creet =
         | Creet.Healthy -> "HealthyCreet.png"
         | Creet.Contaminated -> "ContaminatedCreet.png"
         | Creet.Berserker -> "BerserkerCreet.png"
-        | Creet.Mean -> "MeanCreet.png"
+        | _ -> "MeanCreet.png"
       in
       
       (* Get current position and size from the DOM element *)
@@ -84,7 +84,7 @@ let rec create_creet_dom_element creet =
     | Creet.Healthy -> "HealthyCreet.png"
     | Creet.Contaminated -> "ContaminatedCreet.png"
     | Creet.Berserker -> "BerserkerCreet.png"
-    | Creet.Mean -> "MeanCreet.png"
+    | _ -> "MeanCreet.png"
   in
 
   (* Set all styling using cssText *)
