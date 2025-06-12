@@ -1,10 +1,20 @@
 open Js_of_ocaml
+open Tyxml.Html
 module Html = Dom_html
 
 (* status status type *)
 type health_status = Healthy | Contaminated | Berserker | Mean | Dead
 let time_to_die = 30.0 
 
+(* Helper function to extract specific element type from TyXML *)
+let extract_element doc tyxml_element selector =
+  let html_string = Format.asprintf "%a" (Tyxml.Html.pp_elt ()) tyxml_element in
+  let temp_container = Html.createDiv doc in
+  temp_container##.innerHTML := Js.string html_string;
+  let element = Js.Opt.get 
+    (temp_container##querySelector (Js.string selector))
+    (fun () -> failwith ("Element not found: " ^ selector)) in
+  Js.Unsafe.coerce element
 
 type creet = {
   mutable x: float; 
@@ -21,14 +31,23 @@ type creet = {
   mutable dom_element: Html.divElement Js.t option;
 }
 
-(* Create a new healthy creet *)
+(* Create a new healthy creet using TyXML for validation *)
 let create_creet img_src x y dx dy =
-  let img = Html.createImg Html.document in
-  img##.src := Js.string img_src;
+  (* Create image element using TyXML for static validation *)
+  let img_tyxml = img 
+    ~src:img_src 
+    ~alt:"Creet sprite" 
+    ~a:[
+      a_style "display: block; max-width: 100%; height: auto;";
+      a_class ["creet-image"]
+    ] () in
+  
+  let img_elem = extract_element Html.document img_tyxml "img" in
+  
   { 
     x; y; dx; dy; 
     status = Healthy; 
-    image = img; 
+    image = img_elem; 
     speed_factor = 1.0; 
     is_dragged = false; 
     size_factor = 1.0; 
@@ -37,14 +56,37 @@ let create_creet img_src x y dx dy =
     contamination_timer = 0.0;
   }
 
-(* Update creet's image based on status status *)
+(* Update creet's image based on status using TyXML validation *)
 let update_creet_image creet =
-  match creet.status with
-  | Healthy -> creet.image##.src := Js.string "HealthyCreet.png"
-  | Contaminated -> creet.image##.src := Js.string "ContaminatedCreet.png"
-  | Berserker -> creet.image##.src := Js.string "BerserkerCreet.png"
-  | _ -> creet.image##.src := Js.string "MeanCreet.png"
-
+  (* Create new validated image elements for each status *)
+  let new_img_tyxml = match creet.status with
+  | Healthy -> img 
+      ~src:"HealthyCreet.png" 
+      ~alt:"Healthy Creet" 
+      ~a:[a_class ["creet-image"; "healthy"]] ()
+  | Contaminated -> img 
+      ~src:"ContaminatedCreet.png" 
+      ~alt:"Contaminated Creet" 
+      ~a:[a_class ["creet-image"; "contaminated"]] ()
+  | Berserker -> img 
+      ~src:"BerserkerCreet.png" 
+      ~alt:"Berserker Creet" 
+      ~a:[a_class ["creet-image"; "berserker"]] ()
+  | Mean -> img 
+      ~src:"MeanCreet.png" 
+      ~alt:"Mean Creet" 
+      ~a:[a_class ["creet-image"; "mean"]] ()
+  | Dead -> img 
+      ~src:"DeadCreet.png" 
+      ~alt:"Dead Creet" 
+      ~a:[a_class ["creet-image"; "dead"]] ()
+  in
+  
+  (* Extract the validated image element and update the existing one *)
+  let temp_img = extract_element Html.document new_img_tyxml "img" in
+  creet.image##.src := temp_img##.src;
+  creet.image##.alt := temp_img##.alt;
+  creet.image##.className := temp_img##.className
 
 let global_speed = ref 1.0
 let creet_hitbox_size = 65.
