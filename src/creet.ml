@@ -361,8 +361,9 @@ let check_collisions creet all_creets =
       let collision = abs_float (creet.x -. other.x) < (creet_half_size +. other_half_size) &&
              abs_float (creet.y -. other.y) < (creet_half_size +. other_half_size) &&
              Random.int 100 < 2 in
-      if other.status = Mean then
-        Printf.printf "Collision detected with Mean creet\n";
+      if other.is_dragged then
+        (* Printf.printf "Collision detected with dragged creet\n"; *)
+        ();
       collision
     ) all_nearby in
     
