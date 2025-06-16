@@ -22,24 +22,11 @@
       }
     </style>
     <script>
-      // Auto-refresh when the JavaScript file changes
-      let lastModified = 0;
       
       function checkForUpdates() {
         fetch('h42n42.js', { method: 'HEAD' })
-          .then(response => {
-            const modified = new Date(response.headers.get('Last-Modified')).getTime();
-            if (lastModified && lastModified !== modified) {
-              console.log('JavaScript updated, refreshing page...');
-              window.location.reload();
-            }
-            lastModified = modified;
-          })
           .catch(err => console.error('Error checking for updates:', err));
       }
-      
-      // Check for updates every 2 seconds
-      setInterval(checkForUpdates, 2000);
     </script>
   </head>
   <body>

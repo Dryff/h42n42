@@ -38,8 +38,6 @@ let rec spawn_and_speed_loop () =
     (* Increasing global speed *)
     if current_time -. !Gamestate.last_speed_increase >= Gamestate.speed_increase_interval then begin
       Creet.global_speed := !Creet.global_speed +. Gamestate.speed_increase_factor;
-      let speed_percentage = int_of_float (!Creet.global_speed *. 100.) in
-      Printf.printf "Speed increased to %d%%\n" speed_percentage;
       Gamestate.last_speed_increase := current_time
     end;
   end;
@@ -225,16 +223,12 @@ let init () =
     if not !Gamestate.game_over && not !Gamestate.is_paused then begin
       let new_speed = !Creet.global_speed +. 0.1 in
       Creet.global_speed := min new_speed 3.0;  (* Cap at 300% speed *)
-      let speed_percentage = int_of_float (!Creet.global_speed *. 100.) in
-      Printf.printf "Speed increased to %d%%\n" speed_percentage
     end
   );
   Ui.register_speed_minus_handler (fun () ->
     if not !Gamestate.game_over && not !Gamestate.is_paused then begin
       let new_speed = !Creet.global_speed -. 0.1 in
       Creet.global_speed := max new_speed 0.1;  (* Minimum 10% speed *)
-      let speed_percentage = int_of_float (!Creet.global_speed *. 100.) in
-      Printf.printf "Speed decreased to %d%%\n" speed_percentage
     end
   );
   Ui.register_spawn_plus_handler (fun () ->

@@ -161,10 +161,16 @@ let should_creet_die creet current_time =
 
 (* Update creet position, handle bouncing, and check for river/hospital contact *)
 let update_creet creet canvas_width canvas_height dt all_creets =
+  let was_alive = creet.status <> Dead in
   let current_time = Js.to_float (Js.date##now) /. 1000. in
 
   if should_creet_die creet current_time then begin
     creet.status <- Dead;
+  end;
+
+  if was_alive && creet.status = Dead then begin
+    Printf.printf "CREET DIED: dragged=%b at (%.2f, %.2f) - contamination_timer=%.2f\n" 
+      creet.is_dragged creet.x creet.y creet.contamination_timer;
   end;
 
   (* Handling mean creet behavior and regular creets direction changes *)
@@ -326,22 +332,38 @@ let check_collisions creet all_creets =
   if creet.status = Healthy && not creet.is_dragged then
     let collision_radius = creet_hitbox_size *. creet.size_factor in
     
-    (* Step 1: Build quadtree with only contaminated creets for efficiency *)
-    let contaminated_creets = List.filter (fun c -> c.status <> Healthy) all_creets in
+    (* Separate dragged and non-dragged contaminated creets *)
+    let contaminated_creets = List.filter (fun c -> c.status <> Healthy && not c.is_dragged) all_creets in
+    let dragged_contaminated = List.filter (fun c -> c.status <> Healthy && c.is_dragged) all_creets in
+    
+    (* Use quadtree for static contaminated creets *)
     let quad_tree = List.fold_left (fun acc_tree c -> add_creet_to_tree acc_tree c) 
                       (make_quad_tree 0.0 0.0 800.0 600.0) contaminated_creets in
+    let nearby_static = find_nearby_creets quad_tree creet.x creet.y collision_radius in
     
-    (* Step 2: Query quadtree for nearby contaminated creets *)
-    let nearby_creets = find_nearby_creets quad_tree creet.x creet.y collision_radius in
+    (* Check all dragged creets directly (no quadtree) *)
+    let nearby_dragged = List.filter (fun other ->
+      (* Calculate collision radius for THIS specific pair *)
+      let creet_half_size = (creet_hitbox_size *. creet.size_factor) /. 2. in
+      let other_half_size = (creet_hitbox_size *. other.size_factor) /. 2. in
+      (* Use square collision instead of circle *)
+      abs_float (creet.x -. other.x) < (creet_half_size +. other_half_size) &&
+      abs_float (creet.y -. other.y) < (creet_half_size +. other_half_size)
+    ) dragged_contaminated in
     
-    (* Step 3: Check collision with nearby creets only *)
+    (* Combine both lists *)
+    let all_nearby = nearby_static @ nearby_dragged in
+    
     let has_contamination = List.exists (fun other ->
       creet != other &&
       let creet_half_size = (creet_hitbox_size *. creet.size_factor) /. 2. in
       let other_half_size = (creet_hitbox_size *. other.size_factor) /. 2. in
-      abs_float (creet.x -. other.x) < (creet_half_size +. other_half_size) &&
-      abs_float (creet.y -. other.y) < (creet_half_size +. other_half_size) &&
-      Random.int 100 < 2
-    ) nearby_creets in
+      let collision = abs_float (creet.x -. other.x) < (creet_half_size +. other_half_size) &&
+             abs_float (creet.y -. other.y) < (creet_half_size +. other_half_size) &&
+             Random.int 100 < 2 in
+      if other.status = Mean then
+        Printf.printf "Collision detected with Mean creet\n";
+      collision
+    ) all_nearby in
     
     if has_contamination then change_status creet Contaminated
